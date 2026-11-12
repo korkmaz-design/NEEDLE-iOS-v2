@@ -206,25 +206,38 @@ fun NeedleScreen(
                         radius = size.maxDimension * .78f
                     ))
                     val cx = size.width * .5f
-                    val cy = size.height * .43f
-                    val points = (0 until 64).map { i ->
-                        val lyricPhase = if (activeLyric >= 0) activeLyric * 0.37f else 0f
-                        val angle = i * 2.399 + pulse * 0.18f + lyricPhase + sin(pulse + i + lyricPhase) * 0.08f
-                        val scatter = 34f + (i % 9) * 24f
-                        val gather = 1f - lyricReveal * 0.22f
-                        val audio = NeedleAudioReactive.level
-                        val radius = (scatter * gather + sin(pulse * 2f + i + lyricPhase) * (9f + 7f * lyricReveal) + audio * (18f + (i % 6) * 5f)) * pulse
-                        Offset(cx + cos(angle).toFloat() * radius, cy + sin(angle).toFloat() * radius * 1.15f)
+                    val cy = size.height * .40f
+                    val line = lyricLines.getOrNull(activeLyric)
+                    val nextLineTime = lyricLines.getOrNull(activeLyric + 1)?.timeMs
+                    val lineDuration = if (line != null && nextLineTime != null)
+                        (nextLineTime - line.timeMs).coerceAtLeast(1000L) else 4000L
+                    val lineProgress = if (line != null)
+                        ((playbackPosition - line.timeMs).toFloat() / lineDuration).coerceIn(0f, .999f) else 0f
+                    val words = line?.text?.trim()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
+                    val wordIndex = if (words.isNotEmpty()) (lineProgress * words.size).toInt().coerceIn(0, words.lastIndex) else 0
+                    val wordProgress = if (words.isNotEmpty()) (lineProgress * words.size - wordIndex).coerceIn(0f, 1f) else 0f
+                    // One small constellation is drawn for the current lyric word, then it clears for the next word.
+                    val cxWord = cx + ((wordIndex - (words.size - 1) / 2f) * 23f).coerceIn(-size.width * .34f, size.width * .34f)
+                    val audio = NeedleAudioReactive.level
+                    val local = listOf(
+                        Offset(-13f, 4f), Offset(-4f, -11f), Offset(8f, -5f),
+                        Offset(14f, 10f), Offset(-2f, 14f)
+                    )
+                    val nodes = local.mapIndexed { i, offset ->
+                        val drift = sin(pulse * 1.8f + i * 1.7f) * (1.2f + audio * 2f)
+                        Offset(cxWord + offset.x + drift, cy + offset.y + cos(pulse + i) * 1.5f)
                     }
-                    points.forEachIndexed { i, p ->
-                        points.drop(i + 1).filter { q ->
-                            val dx = p.x - q.x; val dy = p.y - q.y
-                            dx * dx + dy * dy < (42f + lyricReveal * 82f) * (42f + lyricReveal * 82f)
-                        }.forEach { q ->
-                            drawLine(Crimson.copy(alpha = .04f + lyricReveal * .34f), p, q, strokeWidth = 0.8f + lyricReveal * 0.65f)
+                    val links = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4, 4 to 0)
+                    val revealedLinks = (wordProgress * (links.size + 1)).toInt().coerceIn(0, links.size)
+                    links.take(revealedLinks).forEach { (a, b) ->
+                        drawLine(Crimson.copy(alpha = .72f), nodes[a], nodes[b], strokeWidth = .7f)
+                    }
+                    nodes.forEachIndexed { i, point ->
+                        val visible = i <= revealedLinks
+                        if (visible) {
+                            drawCircle(Color.White.copy(alpha = .92f), radius = 1.15f + audio * .45f, center = point)
+                            if (i == 1) drawCircle(Crimson.copy(alpha = .18f), radius = 3.2f, center = point)
                         }
-                        drawCircle(Color.White.copy(alpha = .85f), radius = (if (i % 5 == 0) 3.2f else 1.7f) + NeedleAudioReactive.level * 2.8f, center = p)
-                        if (i % 5 == 0) drawCircle(Crimson.copy(alpha = .22f), radius = 9f * pulse, center = p)
                     }
                     for (i in 0 until 54) {
                         val x = (i * 97f % size.width)
