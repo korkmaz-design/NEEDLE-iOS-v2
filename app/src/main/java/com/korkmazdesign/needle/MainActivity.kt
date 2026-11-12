@@ -87,7 +87,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {\n        super.onRequestPermissionsResult(requestCode, permissions, grantResults)\n        if (requestCode == 7101 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) NeedleAudioReactive.start()\n    }\n\n    override fun onDestroy() {\n        NeedleAudioReactive.stop()\n        super.onDestroy()\n    }\n\n    override fun onNewIntent(intent: Intent) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 7101 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) NeedleAudioReactive.start()
+    }
+
+    override fun onDestroy() {
+        NeedleAudioReactive.stop()
+        super.onDestroy()
+    }
+
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         intent.data?.let { SpotifyDirect.handleRedirect(this, it) }
@@ -197,7 +207,8 @@ fun NeedleScreen(
                         val angle = i * 2.399 + pulse * 0.18f + lyricPhase + sin(pulse + i + lyricPhase) * 0.08f
                         val scatter = 34f + (i % 9) * 24f
                         val gather = 1f - lyricReveal * 0.22f
-                        val audio = NeedleAudioReactive.level\n                        val radius = (scatter * gather + sin(pulse * 2f + i + lyricPhase) * (9f + 7f * lyricReveal) + audio * (18f + (i % 6) * 5f)) * pulse
+                        val audio = NeedleAudioReactive.level
+                        val radius = (scatter * gather + sin(pulse * 2f + i + lyricPhase) * (9f + 7f * lyricReveal) + audio * (18f + (i % 6) * 5f)) * pulse
                         Offset(cx + cos(angle).toFloat() * radius, cy + sin(angle).toFloat() * radius * 1.15f)
                     }
                     points.forEachIndexed { i, p ->
