@@ -156,8 +156,7 @@ class NeedleNotificationListener : NotificationListenerService() {
             .setContentTitle(title)
             .setContentText(lyric)
             .setSubText(NeedleMusicState.artist.value)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$lyric
-${NeedleMusicState.artist.value}"))
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$lyric ${NeedleMusicState.artist.value}"))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setOngoing(true)
