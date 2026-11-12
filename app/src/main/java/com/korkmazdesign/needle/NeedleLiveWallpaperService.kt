@@ -105,7 +105,6 @@ class NeedleLiveWallpaperService : WallpaperService() {
             paint.color = Color.argb(225, 248, 239, 243)
             paint.textAlign = Paint.Align.CENTER
             paint.textSize = 17f
-            paint.letterSpacing = .28f
             canvas.drawText("N E E D L E", w * .5f, h * .16f, paint)
             paint.color = Color.argb(190, 255, 49, 85)
             paint.textSize = 10f
