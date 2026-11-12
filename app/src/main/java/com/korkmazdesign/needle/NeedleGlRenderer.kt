@@ -148,7 +148,7 @@ private class NeedleGlRenderer(private val context: Context) : GLSurfaceView.Ren
         pointSizeHandle = GLES20.glGetUniformLocation(program, "uPointSize")
         pointModeHandle = GLES20.glGetUniformLocation(program, "uPointMode")
         GLES20.glClearColor(.008f, .006f, .012f, 1f)
-        setupVideoBackground()
+        // The supplied clip is a filmed reference, not a background video. Render the scene natively.
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
     }
@@ -163,7 +163,7 @@ private class NeedleGlRenderer(private val context: Context) : GLSurfaceView.Ren
         val t = (System.nanoTime() - startNs) / 1_000_000_000f
         val state = NeedleGlState.frame
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
-        drawVideoBackground()
+        // Native OpenGL scene; no screen-recording video is composited.
         GLES20.glUseProgram(program)
 
         // Animated crimson light field. Multiple drifting radial glows create depth.
