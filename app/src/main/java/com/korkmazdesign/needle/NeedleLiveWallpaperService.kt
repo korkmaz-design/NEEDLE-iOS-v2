@@ -68,34 +68,34 @@ class NeedleLiveWallpaperService : WallpaperService() {
             paint.shader = null
 
             val audio = NeedleAudioReactive.level
-            val points = ArrayList<Pair<Float, Float>>()
-            for (i in 0 until 46) {
-                val lyricPhase = if (NeedleMusicState.lyrics.value.isNotEmpty()) (NeedleMusicState.lyrics.value.indexOfLast { it.timeMs <= NeedleMusicState.positionMs.value }.coerceAtLeast(0) * .31f) else 0f
-                val angle = i * 2.399f + lyricPhase + .10f * sin(frame + i)
-                val radius = (30f + (i % 8) * 25f + audio * (18f + (i % 6) * 5f)) * (1f + .055f * sin(frame + i))
-                val x = w * .5f + cos(angle) * radius
-                val y = h * .43f + sin(angle) * radius * 1.45f
-                points.add(Pair(x, y))
+            val current = NeedleMusicState.lyrics.value
+            val pos = NeedleMusicState.positionMs.value
+            val active = current.indexOfLast { it.timeMs <= pos }
+            val line = current.getOrNull(active)
+            val nextTime = current.getOrNull(active + 1)?.timeMs
+            val duration = if (line != null && nextTime != null) (nextTime - line.timeMs).coerceAtLeast(1000L) else 4000L
+            val progress = if (line != null) ((pos - line.timeMs).toFloat() / duration).coerceIn(0f, .999f) else 0f
+            val words = line?.text?.trim()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
+            val wordIndex = if (words.isNotEmpty()) (progress * words.size).toInt().coerceIn(0, words.lastIndex) else 0
+            val wordProgress = if (words.isNotEmpty()) (progress * words.size - wordIndex).coerceIn(0f, 1f) else 0f
+            val centerX = w * .5f + ((wordIndex - (words.size - 1) / 2f) * 23f).coerceIn(-w * .34f, w * .34f)
+            val centerY = h * .43f
+            val offsets = listOf(-13f to 4f, -4f to -11f, 8f to -5f, 14f to 10f, -2f to 14f)
+            val nodes = offsets.mapIndexed { i, o ->
+                Pair(centerX + o.first + sin(frame + i) * (1.1f + audio * 1.5f),
+                    centerY + o.second + cos(frame + i) * 1.2f)
             }
-            paint.strokeWidth = 1.1f
-            for (i in points.indices) {
-                for (j in i + 1 until points.size) {
-                    val a = points[i]
-                    val b = points[j]
-                    val dx = a.first - b.first
-                    val dy = a.second - b.second
-                    if (dx * dx + dy * dy < (42f + 45f * (0.5f + 0.5f * sin(frame * 0.8f)) + audio * 75f) * (42f + 45f * (0.5f + 0.5f * sin(frame * 0.8f)) + audio * 75f)) {
-                        paint.color = Color.argb(90, 255, 45, 83)
-                        canvas.drawLine(a.first, a.second, b.first, b.second, paint)
-                    }
-                }
+            val links = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4, 4 to 0)
+            val revealed = (wordProgress * (links.size + 1)).toInt().coerceIn(0, links.size)
+            paint.strokeWidth = .7f
+            paint.color = Color.argb(190, 255, 49, 85)
+            links.take(revealed).forEach { (a, b) ->
+                canvas.drawLine(nodes[a].first, nodes[a].second, nodes[b].first, nodes[b].second, paint)
             }
-            points.forEachIndexed { i, p ->
-                paint.color = if (i % 5 == 0) Color.WHITE else Color.argb(190, 255, 225, 234)
-                canvas.drawCircle(p.first, p.second, (if (i % 5 == 0) 3.2f else 1.7f) + audio * 3f, paint)
-                if (i % 5 == 0) {
-                    paint.color = Color.argb(42, 255, 45, 83)
-                    canvas.drawCircle(p.first, p.second, 10f + 2f * sin(frame), paint)
+            nodes.forEachIndexed { i, p ->
+                if (i <= revealed) {
+                    paint.color = Color.argb(235, 255, 250, 252)
+                    canvas.drawCircle(p.first, p.second, 1.1f + audio * .4f, paint)
                 }
             }
             paint.color = Color.argb(135, 255, 255, 255)
