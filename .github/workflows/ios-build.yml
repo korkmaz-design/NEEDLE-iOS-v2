@@ -22,4 +22,12 @@ jobs:
             -sdk iphonesimulator \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO build
+      - name: Upload simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEEDLE-simulator-app
+          path: build/Build/Products/Debug-iphonesimulator/NEEDLE.app
+          if-no-files-found: error
+          retention-days: 7
