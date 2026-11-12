@@ -24,6 +24,24 @@ object NeedleGlState {
     @Volatile var frame: NeedleFrame = NeedleFrame()
 }
 
+object NeedleFrameFactory {
+    fun create(lines: List<LyricLine>, positionMs: Long, audio: Float): NeedleFrame {
+        val activeLine = lines.indexOfLast { it.timeMs <= positionMs }
+        val line = lines.getOrNull(activeLine)
+        val words = line?.text?.trim()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
+        val nextTime = lines.getOrNull(activeLine + 1)?.timeMs
+        val duration = if (line != null && nextTime != null)
+            (nextTime - line.timeMs).coerceAtLeast(1000L) else 4000L
+        val progress = if (line != null)
+            ((positionMs - line.timeMs).toFloat() / duration).coerceIn(0f, .999f) else 0f
+        val activeWord = if (words.isNotEmpty())
+            (progress * words.size).toInt().coerceIn(0, words.lastIndex) else -1
+        val wordProgress = if (words.isNotEmpty())
+            (progress * words.size - activeWord).coerceIn(0f, 1f) else 0f
+        return NeedleFrame(words, activeWord, wordProgress, audio.coerceIn(0f, 1f))
+    }
+}
+
 class NeedleGlSurfaceView(context: Context) : GLSurfaceView(context) {
     init {
         setEGLContextClientVersion(2)
