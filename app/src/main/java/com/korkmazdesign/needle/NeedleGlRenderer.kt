@@ -173,9 +173,33 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         drawPoints(nodes, nodeAlpha, 5f, floatArrayOf(.90f, .76f, .81f, .96f))
         if (active >= 0 && active < wordCount) {
             val pulse = 1f + .28f * sin(t * 5.2f) + state.audio * .18f
-            drawPoints(floatArrayOf(nodes[active * 2], nodes[active * 2 + 1]),
+            val cx = nodes[active * 2]
+            val cy = nodes[active * 2 + 1]
+
+            // Three soft concentric ripples expand from the active lyric star.
+            // Their phase follows the current word, so every new word restarts the wave.
+            for (ring in 0 until 3) {
+                val phase = (state.wordProgress + ring * .34f) % 1f
+                val radius = .025f + phase * .205f
+                val alpha = (1f - phase) * .72f
+                for (segment in 0 until 48) {
+                    val a0 = (segment.toFloat() / 48f) * (Math.PI * 2.0)
+                    val a1 = ((segment + 1).toFloat() / 48f) * (Math.PI * 2.0)
+                    val index = segment * 4
+                    rippleVertices[index] = cx + cos(a0).toFloat() * radius
+                    rippleVertices[index + 1] = cy + sin(a0).toFloat() * radius
+                    rippleVertices[index + 2] = cx + cos(a1).toFloat() * radius
+                    rippleVertices[index + 3] = cy + sin(a1).toFloat() * radius
+                    rippleAlpha[segment * 2] = alpha
+                    rippleAlpha[segment * 2 + 1] = alpha
+                }
+                drawLines(rippleVertices, rippleAlpha, 1.5f,
+                    floatArrayOf(1f, .28f, .43f, .82f), 96)
+            }
+
+            drawPoints(floatArrayOf(cx, cy),
                 floatArrayOf(1f), 23f * pulse, floatArrayOf(.88f, .018f, .12f, .82f))
-            drawPoints(floatArrayOf(nodes[active * 2], nodes[active * 2 + 1]),
+            drawPoints(floatArrayOf(cx, cy),
                 floatArrayOf(1f), 7f * pulse, floatArrayOf(1f, .82f, .87f, 1f))
         }
     }
@@ -200,7 +224,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         GLES20.glDisableVertexAttribArray(alphaHandle)
     }
 
-    private fun drawLines(data: FloatArray, alpha: FloatArray, size: Float, color: FloatArray) {
+    private fun drawLines(data: FloatArray, alpha: FloatArray, size: Float, color: FloatArray, vertexCount: Int = 2) {
         GLES20.glUniform4fv(colorHandle, 1, color, 0)
         GLES20.glUniform1f(pointSizeHandle, size)
         GLES20.glUniform1f(pointModeHandle, 0f)
@@ -215,7 +239,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         GLES20.glEnableVertexAttribArray(alphaHandle)
         GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, positionBuffer)
         GLES20.glVertexAttribPointer(alphaHandle, 1, GLES20.GL_FLOAT, false, 0, alphaBuffer)
-        GLES20.glDrawArrays(GLES20.GL_LINES, 0, 2)
+        GLES20.glDrawArrays(GLES20.GL_LINES, 0, vertexCount)
         GLES20.glDisableVertexAttribArray(positionHandle)
         GLES20.glDisableVertexAttribArray(alphaHandle)
     }
