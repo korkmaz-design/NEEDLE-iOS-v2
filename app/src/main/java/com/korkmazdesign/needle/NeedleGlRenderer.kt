@@ -69,9 +69,12 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         uniform float uPointMode;
         varying float vAlpha;
         void main() {
-            vec2 p = gl_PointCoord - vec2(0.5);
-            float d = length(p);
-            float glow = mix(1.0, 1.0 - smoothstep(0.045, 0.5, d), uPointMode);
+            float glow = 1.0;
+            if (uPointMode > 0.5) {
+                vec2 p = gl_PointCoord - vec2(0.5);
+                float d = length(p);
+                glow = 1.0 - smoothstep(0.035, 0.5, d);
+            }
             gl_FragColor = vec4(uColor.rgb, uColor.a * vAlpha * glow);
         }
     """
@@ -130,11 +133,15 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
         GLES20.glUseProgram(program)
 
-        // Deep crimson atmospheric field, built from layered translucent star glows.
-        val aspect = width.toFloat() / height.toFloat()
-        val center = floatArrayOf(0f, 0f, 0f)
-        drawPoints(center, floatArrayOf(.20f), 240f * (1f + state.audio * .3f),
-            floatArrayOf(.72f, .035f, .16f, .10f))
+        // Animated crimson light field. Multiple drifting radial glows create depth.
+        val driftA = floatArrayOf(.46f * sin(t * .19f), .18f * cos(t * .16f))
+        val driftB = floatArrayOf(.52f * cos(t * .13f + 1.4f), -.24f * sin(t * .17f))
+        drawPoints(driftA, floatArrayOf(.24f), 330f + state.audio * 36f,
+            floatArrayOf(.78f, .012f, .105f, .22f))
+        drawPoints(driftB, floatArrayOf(.18f), 265f + state.audio * 24f,
+            floatArrayOf(.42f, .008f, .075f, .17f))
+        drawPoints(floatArrayOf(-.55f * cos(t * .11f), .40f * sin(t * .14f)),
+            floatArrayOf(.12f), 210f, floatArrayOf(.95f, .025f, .14f, .12f))
 
         for (i in 0 until 260) {
             starPositions[i * 2] = stars[i * 3]
@@ -170,7 +177,22 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
                 lineAlpha[edge * 2] = a
                 lineAlpha[edge * 2 + 1] = a
             }
-            drawLines(lineVertices, lineAlpha, 2.6f, floatArrayOf(1f, .34f, .48f, .96f), (wordCount - 1) * 2)
+            drawLines(lineVertices, lineAlpha, 1.5f, floatArrayOf(.94f, .94f, 1f, .96f), (wordCount - 1) * 2)
+            // Fine diagonal cross-links turn the chain into a constellation figure.
+            val crossVertices = FloatArray((wordCount - 2) * 4)
+            val crossAlpha = FloatArray((wordCount - 2) * 2)
+            for (edge in 0 until wordCount - 2) {
+                val base = edge * 4
+                crossVertices[base] = nodes[edge * 2]
+                crossVertices[base + 1] = nodes[edge * 2 + 1]
+                crossVertices[base + 2] = nodes[(edge + 2) * 2]
+                crossVertices[base + 3] = nodes[(edge + 2) * 2 + 1]
+                val shown = edge + 2 <= active
+                val a = if (shown && edge % 2 == 0) .48f * fadeOut else 0f
+                crossAlpha[edge * 2] = a
+                crossAlpha[edge * 2 + 1] = a
+            }
+            drawLines(crossVertices, crossAlpha, 1f, floatArrayOf(.82f, .88f, 1f, .72f), (wordCount - 2) * 2)
         }
 
         val nodeAlpha = FloatArray(wordCount) { i ->
