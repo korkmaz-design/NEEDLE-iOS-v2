@@ -85,6 +85,10 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
     private var height = 1
     private val startNs = System.nanoTime()
     private val stars = FloatArray(260 * 3)
+    private val starPositions = FloatArray(260 * 2)
+    private val starAlpha = FloatArray(260)
+    private val positionBuffer: FloatBuffer = ByteBuffer.allocateDirect(2048 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+    private val alphaBuffer: FloatBuffer = ByteBuffer.allocateDirect(1024 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
 
     init {
         for (i in 0 until 260) {
@@ -130,8 +134,6 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         drawPoints(center, floatArrayOf(.20f), 240f * (1f + state.audio * .3f),
             floatArrayOf(.72f, .035f, .16f, .10f))
 
-        val starPositions = FloatArray(260 * 2)
-        val starAlpha = FloatArray(260)
         for (i in 0 until 260) {
             starPositions[i * 2] = stars[i * 3]
             starPositions[i * 2 + 1] = stars[i * 3 + 1]
@@ -183,12 +185,16 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         GLES20.glUniform4fv(colorHandle, 1, color, 0)
         GLES20.glUniform1f(pointSizeHandle, size)
         GLES20.glUniform1f(pointModeHandle, 1f)
-        val positions = floatBuffer(data)
-        val alphas = floatBuffer(alpha)
+        positionBuffer.clear()
+        positionBuffer.put(data)
+        positionBuffer.position(0)
+        alphaBuffer.clear()
+        alphaBuffer.put(alpha)
+        alphaBuffer.position(0)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(alphaHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, positions)
-        GLES20.glVertexAttribPointer(alphaHandle, 1, GLES20.GL_FLOAT, false, 0, alphas)
+        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, positionBuffer)
+        GLES20.glVertexAttribPointer(alphaHandle, 1, GLES20.GL_FLOAT, false, 0, alphaBuffer)
         GLES20.glDrawArrays(GLES20.GL_POINTS, 0, alpha.size)
         GLES20.glDisableVertexAttribArray(positionHandle)
         GLES20.glDisableVertexAttribArray(alphaHandle)
@@ -199,18 +205,20 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         GLES20.glUniform1f(pointSizeHandle, size)
         GLES20.glUniform1f(pointModeHandle, 0f)
         GLES20.glLineWidth(size.coerceAtMost(4f))
+        positionBuffer.clear()
+        positionBuffer.put(data)
+        positionBuffer.position(0)
+        alphaBuffer.clear()
+        alphaBuffer.put(alpha)
+        alphaBuffer.position(0)
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(alphaHandle)
-        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, floatBuffer(data))
-        GLES20.glVertexAttribPointer(alphaHandle, 1, GLES20.GL_FLOAT, false, 0, floatBuffer(alpha))
+        GLES20.glVertexAttribPointer(positionHandle, 2, GLES20.GL_FLOAT, false, 0, positionBuffer)
+        GLES20.glVertexAttribPointer(alphaHandle, 1, GLES20.GL_FLOAT, false, 0, alphaBuffer)
         GLES20.glDrawArrays(GLES20.GL_LINES, 0, 2)
         GLES20.glDisableVertexAttribArray(positionHandle)
         GLES20.glDisableVertexAttribArray(alphaHandle)
     }
-
-    private fun floatBuffer(values: FloatArray): FloatBuffer =
-        ByteBuffer.allocateDirect(values.size * 4).order(ByteOrder.nativeOrder())
-            .asFloatBuffer().apply { put(values); position(0) }
 
     private fun compile(type: Int, source: String): Int {
         val shader = GLES20.glCreateShader(type)
