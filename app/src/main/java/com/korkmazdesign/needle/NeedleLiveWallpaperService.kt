@@ -70,14 +70,10 @@ class NeedleLiveWallpaperService : WallpaperService() {
             val audio = NeedleAudioReactive.level.coerceIn(0f, 1f)
             val current = NeedleMusicState.lyrics.value
             val pos = NeedleMusicState.positionMs.value
-            val active = current.indexOfLast { it.timeMs <= pos }
-            val line = current.getOrNull(active)
-            val nextTime = current.getOrNull(active + 1)?.timeMs
-            val duration = if (line != null && nextTime != null) (nextTime - line.timeMs).coerceAtLeast(1000L) else 4000L
-            val progress = if (line != null) ((pos - line.timeMs).toFloat() / duration).coerceIn(0f, .999f) else 0f
-            val words = line?.text?.trim()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
-            val activeWord = if (words.isNotEmpty()) (progress * words.size).toInt().coerceIn(0, words.lastIndex) else -1
-            val wordProgress = if (words.isNotEmpty()) (progress * words.size - activeWord).coerceIn(0f, 1f) else 0f
+            val frameState = NeedleFrameFactory.create(current, pos, audio)
+            val words = frameState.words
+            val activeWord = frameState.activeWord
+            val wordProgress = frameState.wordProgress
             val count = maxOf(12, words.size)
             val points = (0 until count).map { i ->
                 val x = w * (.045f + .91f * i / (count - 1).coerceAtLeast(1))
