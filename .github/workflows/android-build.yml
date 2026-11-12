@@ -1,7 +1,7 @@
 name: NEEDLE Android Build
 on:
   push:
-    branches: [main]
+    branches: [main, feature/opengl-visual-engine]
   workflow_dispatch:
 jobs:
   build:
