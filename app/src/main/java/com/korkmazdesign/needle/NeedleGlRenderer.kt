@@ -152,21 +152,25 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
                 cos(i * .57f + t * .72f) * .075f
         }
 
-        // Only the current word's connection is drawn. Its line grows from zero
-        // on each word transition instead of leaving the whole old chain on screen.
+        // Build the full constellation from left to right; completed links remain visible.
         val active = state.activeWord
-        if (active >= 0 && active < wordCount - 1) {
-            val progress = state.wordProgress.coerceIn(0f, 1f)
-            val x1 = nodes[active * 2]
-            val y1 = nodes[active * 2 + 1]
-            val x2 = nodes[(active + 1) * 2]
-            val y2 = nodes[(active + 1) * 2 + 1]
-            val line = floatArrayOf(x1, y1, x1 + (x2 - x1) * progress, y1 + (y2 - y1) * progress)
-            drawLines(line, floatArrayOf(.25f, .95f), 3f,
-                floatArrayOf(1f, .48f, .60f, .96f))
-            drawPoints(floatArrayOf(x1, y1, x2, y2),
-                floatArrayOf(.7f, progress), 12f + state.audio * 8f,
-                floatArrayOf(.92f, .035f, .16f, .94f))
+        val reveal = if (active < 0) 0f else ((active + state.wordProgress) / (wordCount - 1).toFloat()).coerceIn(0f, 1f)
+        val fadeOut = if (reveal > .94f) ((1f - reveal) / .06f).coerceIn(0f, 1f) else 1f
+        if (active >= 0) {
+            val lineVertices = FloatArray((wordCount - 1) * 4)
+            val lineAlpha = FloatArray((wordCount - 1) * 2)
+            for (edge in 0 until wordCount - 1) {
+                val base = edge * 4
+                lineVertices[base] = nodes[edge * 2]
+                lineVertices[base + 1] = nodes[edge * 2 + 1]
+                val edgeProgress = when { edge < active -> 1f; edge == active -> state.wordProgress.coerceIn(0f, 1f); else -> 0f }
+                lineVertices[base + 2] = nodes[edge * 2] + (nodes[(edge + 1) * 2] - nodes[edge * 2]) * edgeProgress
+                lineVertices[base + 3] = nodes[edge * 2 + 1] + (nodes[(edge + 1) * 2 + 1] - nodes[edge * 2 + 1]) * edgeProgress
+                val a = if (edge <= active) (.34f + .58f * edgeProgress) * fadeOut else 0f
+                lineAlpha[edge * 2] = a
+                lineAlpha[edge * 2 + 1] = a
+            }
+            drawLines(lineVertices, lineAlpha, 2.6f, floatArrayOf(1f, .34f, .48f, .96f), (wordCount - 1) * 2)
         }
 
         val nodeAlpha = FloatArray(wordCount) { i ->
