@@ -183,6 +183,19 @@ fun NeedleScreen(
     val lyricLines = NeedleMusicState.lyrics.value
     val activeLyric = lyricLines.indexOfLast { it.timeMs <= playbackPosition }
 
+    LaunchedEffect(activeLyric, playbackPosition, lyricLines, trackTitle) {
+        val line = lyricLines.getOrNull(activeLyric)
+        val words = line?.text?.trim()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
+        val nextTime = lyricLines.getOrNull(activeLyric + 1)?.timeMs
+        val duration = if (line != null && nextTime != null)
+            (nextTime - line.timeMs).coerceAtLeast(1000L) else 4000L
+        val progress = if (line != null)
+            ((playbackPosition - line.timeMs).toFloat() / duration).coerceIn(0f, .999f) else 0f
+        val activeWord = if (words.isNotEmpty()) (progress * words.size).toInt().coerceIn(0, words.lastIndex) else -1
+        val wordProgress = if (words.isNotEmpty()) (progress * words.size - activeWord).coerceIn(0f, 1f) else 0f
+        NeedleGlState.frame = NeedleFrame(words, activeWord, wordProgress, NeedleAudioReactive.level)
+    }
+
     val motion = rememberInfiniteTransition(label = "needle-motion")
     val lyricReveal by animateFloatAsState(targetValue = if (activeLyric >= 0) 1f else 0f, animationSpec = tween(1100), label = "lyric-reveal")
     val pulse = motion.animateFloat(
@@ -232,7 +245,7 @@ fun NeedleScreen(
                             fontSize = 16.sp, textAlign = TextAlign.Center)
                     }
                     Spacer(Modifier.height(18.dp))
-                    Text("SYNCED LYRICS • LRCLIB", color = SoftWhite.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 2.sp)
+                    Text("LINE-TIMED LYRICS • ESTIMATED WORD FLOW", color = SoftWhite.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 2.sp)
                     Spacer(Modifier.weight(1f))
                     Column(
                         Modifier.fillMaxWidth().background(Color(0xAA100B10), RoundedCornerShape(24.dp)).padding(20.dp)
