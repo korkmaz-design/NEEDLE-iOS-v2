@@ -13,6 +13,18 @@
             </intent-filter>
         </activity>
         <service
+            android:name=".NeedleLiveWallpaperService"
+            android:label="NEEDLE Live Wallpaper"
+            android:permission="android.permission.BIND_WALLPAPER"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/needle_wallpaper" />
+        </service>
+        <service
             android:name=".NeedleNotificationListener"
             android:label="NEEDLE music connection"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
