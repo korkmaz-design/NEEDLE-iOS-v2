@@ -24,7 +24,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
         private val tick = object : Runnable {
             override fun run() {
                 drawFrame()
-                if (visible) handler.postDelayed(this, 50)
+                if (visible) handler.postDelayed(this, 33)
             }
         }
 
@@ -84,7 +84,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
                 val y = h * (.49f + sin(i * 1.31f + frame * 1.2f) * .105f + cos(i * .63f + frame) * .035f)
                 Pair(x, y)
             }
-            for (i in 0 until 115) {
+            for (i in 0 until 260) {
                 val x = (i * 83f % w)
                 val y = (i * 137f % h)
                 val alpha = (45 + 55 * (0.5f + 0.5f * sin(frame * 2f + i))).toInt().coerceIn(20, 100)
@@ -93,11 +93,16 @@ class NeedleLiveWallpaperService : WallpaperService() {
                 canvas.drawCircle(x, y, if (i % 9 == 0) 1.8f else .9f, paint)
             }
             paint.style = Paint.Style.STROKE
-            for (i in 0 until points.lastIndex) {
-                val reveal = if (activeWord < 0) .12f else if (i < activeWord) .78f else if (i == activeWord) wordProgress else .16f
-                paint.color = Color.argb((reveal * 230).toInt().coerceIn(20, 230), 255, 245, 250)
-                paint.strokeWidth = 1.0f + audio * 1.1f
-                canvas.drawLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, paint)
+            // Reset the constellation link at every word. Only the current segment
+            // is progressively drawn; old segments no longer remain permanently lit.
+            if (activeWord >= 0 && activeWord < points.lastIndex) {
+                val from = points[activeWord]
+                val to = points[activeWord + 1]
+                val endX = from.first + (to.first - from.first) * wordProgress
+                val endY = from.second + (to.second - from.second) * wordProgress
+                paint.color = Color.argb((205 + audio * 45).toInt().coerceIn(0, 255), 255, 225, 235)
+                paint.strokeWidth = 1.2f + audio * 1.4f
+                canvas.drawLine(from.first, from.second, endX, endY, paint)
             }
             paint.style = Paint.Style.FILL
             points.forEachIndexed { i, p ->
