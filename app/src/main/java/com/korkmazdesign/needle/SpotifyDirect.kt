@@ -167,10 +167,12 @@ object SpotifyDirect {
         prefs(context).edit().putString("token_blob", encrypt(value.toString())).apply()
     }
 
-    private fun readTokens(context: Context): JSONObject? = try {
-        val blob = prefs(context).getString("token_blob", null) ?: return null
-        JSONObject(decrypt(blob))
-    } catch (_: Exception) { null }
+    private fun readTokens(context: Context): JSONObject? {
+        return try {
+            val blob = prefs(context).getString("token_blob", null) ?: return null
+            JSONObject(decrypt(blob))
+        } catch (_: Exception) { null }
+    }
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
