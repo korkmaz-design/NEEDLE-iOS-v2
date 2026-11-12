@@ -189,15 +189,15 @@ fun NeedleScreen(
                     ))
                     val cx = size.width * .5f
                     val cy = size.height * .43f
-                    val points = (0 until 34).map { i ->
-                        val angle = i * 2.399
-                        val radius = (34 + (i % 7) * 21) * pulse
+                    val points = (0 until 64).map { i ->
+                        val angle = i * 2.399 + pulse * 0.18f + sin(pulse + i) * 0.08f
+                        val radius = (28f + (i % 9) * 19f + sin(pulse * 2f + i) * 16f) * pulse
                         Offset(cx + cos(angle).toFloat() * radius, cy + sin(angle).toFloat() * radius * 1.15f)
                     }
                     points.forEachIndexed { i, p ->
                         points.drop(i + 1).filter { q ->
                             val dx = p.x - q.x; val dy = p.y - q.y
-                            dx * dx + dy * dy < 105f * 105f
+                            dx * dx + dy * dy < 122f * 122f
                         }.forEach { q ->
                             drawLine(Crimson.copy(alpha = .23f), p, q, strokeWidth = 1.1f)
                         }
@@ -224,12 +224,12 @@ fun NeedleScreen(
                     Spacer(Modifier.height(14.dp))
                     if (lyricLines.isNotEmpty()) {
                         Text(lyricLines.getOrNull(activeLyric)?.text ?: lyricLines.first().text,
-                            color = SoftWhite, fontSize = 27.sp, lineHeight = 35.sp,
+                            color = SoftWhite, fontSize = 29.sp, lineHeight = 39.sp,
                             fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(12.dp))
                         Text(lyricLines.getOrNull(activeLyric + 1)?.text.orEmpty(),
-                            color = SoftWhite.copy(alpha = .42f), fontSize = 17.sp,
-                            lineHeight = 23.sp, textAlign = TextAlign.Center)
+                            color = SoftWhite.copy(alpha = .42f), fontSize = 18.sp,
+                            lineHeight = 26.sp, textAlign = TextAlign.Center)
                     } else {
                         Text(NeedleMusicState.lyricsMessage.value, color = SoftWhite.copy(alpha = .75f),
                             fontSize = 16.sp, textAlign = TextAlign.Center)
