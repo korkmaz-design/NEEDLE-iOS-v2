@@ -79,23 +79,27 @@ class NeedleLiveWallpaperService : WallpaperService() {
             val wordIndex = if (words.isNotEmpty()) (progress * words.size).toInt().coerceIn(0, words.lastIndex) else 0
             val wordProgress = if (words.isNotEmpty()) (progress * words.size - wordIndex).coerceIn(0f, 1f) else 0f
             val centerX = w * .5f + ((wordIndex - (words.size - 1) / 2f) * 23f).coerceIn(-w * .34f, w * .34f)
-            val centerY = h * .43f
-            val offsets = listOf(-13f to 4f, -4f to -11f, 8f to -5f, 14f to 10f, -2f to 14f)
+            // Constellation is deliberately visible on a phone lock screen: larger nodes,
+            // brighter links, and positioned immediately above the lyric.
+            val centerY = h * .585f
+            val offsets = listOf(-30f to 8f, -9f to -25f, 19f to -12f, 31f to 20f, -5f to 29f)
             val nodes = offsets.mapIndexed { i, o ->
-                Pair(centerX + o.first + sin(frame + i) * (1.1f + audio * 1.5f),
-                    centerY + o.second + cos(frame + i) * 1.2f)
+                Pair(centerX + o.first + sin(frame + i) * (2.5f + audio * 3f),
+                    centerY + o.second + cos(frame + i) * 2.5f)
             }
             val links = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4, 4 to 0)
             val revealed = (wordProgress * (links.size + 1)).toInt().coerceIn(0, links.size)
-            paint.strokeWidth = .7f
-            paint.color = Color.argb(190, 255, 49, 85)
+            paint.strokeWidth = 2.0f
+            paint.color = Color.argb(225, 255, 49, 85)
             links.take(revealed).forEach { (a, b) ->
                 canvas.drawLine(nodes[a].first, nodes[a].second, nodes[b].first, nodes[b].second, paint)
             }
             nodes.forEachIndexed { i, p ->
                 if (i <= revealed) {
-                    paint.color = Color.argb(235, 255, 250, 252)
-                    canvas.drawCircle(p.first, p.second, 1.1f + audio * .4f, paint)
+                    paint.color = Color.argb(250, 255, 250, 252)
+                    canvas.drawCircle(p.first, p.second, 3.0f + audio * .8f, paint)
+                    paint.color = Color.argb(75, 255, 49, 85)
+                    canvas.drawCircle(p.first, p.second, 8.0f + audio, paint)
                 }
             }
             paint.color = Color.argb(135, 255, 255, 255)
@@ -116,11 +120,11 @@ class NeedleLiveWallpaperService : WallpaperService() {
             val displayLine = line?.text ?: NeedleMusicState.title.value.takeIf { it != "No track connected" } ?: "THE NIGHT IS STILL YOUNG"
             paint.color = Color.WHITE
             paint.typeface = Typeface.create("serif", Typeface.NORMAL)
-            paint.textSize = 34f
-            canvas.drawText(ellipsize(displayLine, paint, w * .84f), w * .5f, h * .69f, paint)
+            paint.textSize = (w * .055f).coerceIn(42f, 68f)
+            canvas.drawText(ellipsize(displayLine, paint, w * .90f), w * .5f, h * .69f, paint)
             paint.color = Color.argb(170, 230, 210, 220)
-            paint.textSize = 17f
-            canvas.drawText(ellipsize(NeedleMusicState.artist.value, paint, w * .75f), w * .5f, h * .73f, paint)
+            paint.textSize = (w * .027f).coerceIn(22f, 34f)
+            canvas.drawText(ellipsize(NeedleMusicState.artist.value, paint, w * .82f), w * .5f, h * .735f, paint)
             paint.color = Color.argb(120, 255, 255, 255)
             paint.textSize = 9f
             canvas.drawText("A NEEDLE EXPERIENCE", w * .5f, h * .91f, paint)
