@@ -21,6 +21,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import android.os.SystemClock
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -49,6 +62,58 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NeedleScreen(onConnectSpotify: () -> Unit) {
+    var playbackPosition by remember { mutableStateOf(0L) }
+    val trackTitle = NeedleMusicState.title.value
+    val trackArtist = NeedleMusicState.artist.value
+
+    LaunchedEffect(trackTitle, trackArtist) {
+        if (trackTitle == "No track connected") return@LaunchedEffect
+        NeedleMusicState.lyricsMessage.value = "Loading lyrics…"
+        val timedText = withContext(Dispatchers.IO) {
+            try {
+                val query = "https://lrclib.net/api/get?track_name=" +
+                    URLEncoder.encode(trackTitle, "UTF-8") + "&artist_name=" +
+                    URLEncoder.encode(trackArtist, "UTF-8")
+                val connection = (URL(query).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    setRequestProperty("User-Agent", "NEEDLE-Android/0.1")
+                }
+                try {
+                    if (connection.responseCode != 200) null
+                    else JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                        .optString("syncedLyrics").takeIf { it.isNotBlank() && it != "null" }
+                } finally { connection.disconnect() }
+            } catch (_: Exception) { null }
+        }
+        if (timedText != null) {
+            val parsed = Regex("""\[(\d{2}):(\d{2})[.](\d{2,3})\](.*)""")
+                .findAll(timedText).mapNotNull { match ->
+                    val minutes = match.groupValues[1].toLong()
+                    val seconds = match.groupValues[2].toLong()
+                    val millis = match.groupValues[3].padEnd(3, '0').take(3).toLong()
+                    val words = match.groupValues[4].trim()
+                    if (words.isBlank()) null else LyricLine(minutes * 60000 + seconds * 1000 + millis, words)
+                }.toList()
+            NeedleMusicState.lyrics.value = parsed
+            NeedleMusicState.lyricsMessage.value = if (parsed.isEmpty()) "Timed lyrics unavailable for this track" else ""
+        } else {
+            NeedleMusicState.lyricsMessage.value = "Timed lyrics not found for this track"
+        }
+    }
+
+    LaunchedEffect(trackTitle) {
+        while (true) {
+            val base = NeedleMusicState.positionMs.value
+            val updated = NeedleMusicState.positionUpdatedAt.value
+            playbackPosition = if (NeedleMusicState.playing.value && updated > 0L)
+                base + (SystemClock.elapsedRealtime() - updated).coerceAtLeast(0L) else base
+            delay(250)
+        }
+    }
+    val lyricLines = NeedleMusicState.lyrics.value
+    val activeLyric = lyricLines.indexOfLast { it.timeMs <= playbackPosition }
+
     val motion = rememberInfiniteTransition(label = "needle-motion")
     val pulse = motion.animateFloat(
         initialValue = 0.82f, targetValue = 1.16f,
@@ -100,9 +165,20 @@ fun NeedleScreen(onConnectSpotify: () -> Unit) {
                     Spacer(Modifier.weight(1f))
                     Text("NOW PLAYING", color = Crimson, fontSize = 10.sp, letterSpacing = 4.sp)
                     Spacer(Modifier.height(14.dp))
-                    Text("The night\\nis still young", color = SoftWhite, fontSize = 31.sp, lineHeight = 37.sp, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
+                    if (lyricLines.isNotEmpty()) {
+                        Text(lyricLines.getOrNull(activeLyric)?.text ?: lyricLines.first().text,
+                            color = SoftWhite, fontSize = 27.sp, lineHeight = 35.sp,
+                            fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(12.dp))
+                        Text(lyricLines.getOrNull(activeLyric + 1)?.text.orEmpty(),
+                            color = SoftWhite.copy(alpha = .42f), fontSize = 17.sp,
+                            lineHeight = 23.sp, textAlign = TextAlign.Center)
+                    } else {
+                        Text(NeedleMusicState.lyricsMessage.value, color = SoftWhite.copy(alpha = .75f),
+                            fontSize = 16.sp, textAlign = TextAlign.Center)
+                    }
                     Spacer(Modifier.height(18.dp))
-                    Text("NEEDLE • VISUAL EXPERIENCE", color = SoftWhite.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 2.sp)
+                    Text("SYNCED LYRICS • LRCLIB", color = SoftWhite.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 2.sp)
                     Spacer(Modifier.weight(1f))
                     Column(
                         Modifier.fillMaxWidth().background(Color(0xAA100B10), RoundedCornerShape(24.dp)).padding(20.dp)
