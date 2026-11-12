@@ -113,14 +113,11 @@ class NeedleLiveWallpaperService : WallpaperService() {
             paint.textSize = 10f
             canvas.drawText("MUSIC IN MOTION", w * .5f, h * .19f, paint)
 
-            val current = NeedleMusicState.lyrics.value
-            val pos = NeedleMusicState.positionMs.value
-            val active = current.indexOfLast { it.timeMs <= pos }
-            val line = current.getOrNull(active)?.text ?: NeedleMusicState.title.value.takeIf { it != "No track connected" } ?: "THE NIGHT IS STILL YOUNG"
+            val displayLine = line?.text ?: NeedleMusicState.title.value.takeIf { it != "No track connected" } ?: "THE NIGHT IS STILL YOUNG"
             paint.color = Color.WHITE
             paint.typeface = Typeface.create("serif", Typeface.NORMAL)
             paint.textSize = 34f
-            canvas.drawText(ellipsize(line, paint, w * .84f), w * .5f, h * .69f, paint)
+            canvas.drawText(ellipsize(displayLine, paint, w * .84f), w * .5f, h * .69f, paint)
             paint.color = Color.argb(170, 230, 210, 220)
             paint.textSize = 17f
             canvas.drawText(ellipsize(NeedleMusicState.artist.value, paint, w * .75f), w * .5f, h * .73f, paint)
