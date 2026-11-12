@@ -48,11 +48,12 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
     private val fragmentShader = """
         precision mediump float;
         uniform vec4 uColor;
+        uniform float uPointMode;
         varying float vAlpha;
         void main() {
             vec2 p = gl_PointCoord - vec2(0.5);
             float d = length(p);
-            float glow = smoothstep(0.5, 0.05, d);
+            float glow = mix(1.0, smoothstep(0.5, 0.05, d), uPointMode);
             gl_FragColor = vec4(uColor.rgb, uColor.a * vAlpha * glow);
         }
     """
@@ -61,6 +62,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
     private var alphaHandle = 0
     private var colorHandle = 0
     private var pointSizeHandle = 0
+    private var pointModeHandle = 0
     private var width = 1
     private var height = 1
     private val startNs = System.nanoTime()
@@ -86,6 +88,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         alphaHandle = GLES20.glGetAttribLocation(program, "aAlpha")
         colorHandle = GLES20.glGetUniformLocation(program, "uColor")
         pointSizeHandle = GLES20.glGetUniformLocation(program, "uPointSize")
+        pointModeHandle = GLES20.glGetUniformLocation(program, "uPointMode")
         GLES20.glClearColor(.025f, .012f, .025f, 1f)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
@@ -161,6 +164,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         if (data.isEmpty()) return
         GLES20.glUniform4fv(colorHandle, 1, color, 0)
         GLES20.glUniform1f(pointSizeHandle, size)
+        GLES20.glUniform1f(pointModeHandle, 1f)
         val positions = floatBuffer(data)
         val alphas = floatBuffer(alpha)
         GLES20.glEnableVertexAttribArray(positionHandle)
@@ -175,6 +179,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
     private fun drawLines(data: FloatArray, alpha: FloatArray, size: Float, color: FloatArray) {
         GLES20.glUniform4fv(colorHandle, 1, color, 0)
         GLES20.glUniform1f(pointSizeHandle, size)
+        GLES20.glUniform1f(pointModeHandle, 0f)
         GLES20.glLineWidth(size.coerceAtMost(4f))
         GLES20.glEnableVertexAttribArray(positionHandle)
         GLES20.glEnableVertexAttribArray(alphaHandle)
