@@ -181,7 +181,7 @@ fun NeedleScreen(
             NeedleGlState.frame = NeedleFrameFactory.create(
                 NeedleMusicState.lyrics.value, interpolatedPosition, NeedleAudioReactive.level
             )
-            delay(33)
+            delay(16)
         }
     }
     val lyricLines = NeedleMusicState.lyrics.value
