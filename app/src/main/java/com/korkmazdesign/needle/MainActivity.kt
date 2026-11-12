@@ -5,6 +5,8 @@ import android.os.Build
 import android.Manifest
 import android.content.pm.PackageManager
 import android.content.Intent
+import android.content.ComponentName
+import android.app.WallpaperManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -62,12 +64,23 @@ class MainActivity : ComponentActivity() {
         }
         window.statusBarColor = android.graphics.Color.rgb(8, 6, 9)
         window.navigationBarColor = android.graphics.Color.rgb(8, 6, 9)
-        setContent { NeedleScreen(onConnectSpotify = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }) }
+        setContent {
+            NeedleScreen(
+                onConnectSpotify = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                onSetWallpaper = {
+                    val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
+                        putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                            ComponentName(this@MainActivity, NeedleLiveWallpaperService::class.java))
+                    }
+                    startActivity(intent)
+                }
+            )
+        }
     }
 }
 
 @Composable
-fun NeedleScreen(onConnectSpotify: () -> Unit) {
+fun NeedleScreen(onConnectSpotify: () -> Unit, onSetWallpaper: () -> Unit) {
     var playbackPosition by remember { mutableStateOf(0L) }
     val trackTitle = NeedleMusicState.title.value
     val trackArtist = NeedleMusicState.artist.value
@@ -203,6 +216,9 @@ fun NeedleScreen(onConnectSpotify: () -> Unit) {
                             Text("CONNECT SPOTIFY", color = SoftWhite, fontSize = 10.sp, letterSpacing = 2.sp, modifier = Modifier.clickable { onConnectSpotify() })
                             Text("DESIGNED FOR S24 ULTRA", color = SoftWhite.copy(alpha = .4f), fontSize = 8.sp, letterSpacing = 1.sp)
                         }
+                        Spacer(Modifier.height(18.dp))
+                        Text("SET NEEDLE LOCK SCREEN", color = SoftWhite, fontSize = 10.sp,
+                            letterSpacing = 2.sp, modifier = Modifier.fillMaxWidth().clickable { onSetWallpaper() })
                     }
                     Spacer(Modifier.height(12.dp))
                 }
