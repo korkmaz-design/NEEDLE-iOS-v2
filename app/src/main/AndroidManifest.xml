@@ -6,7 +6,7 @@
         android:label="NEEDLE"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:usesCleartextTraffic="false">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:screenOrientation="sensorLandscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
