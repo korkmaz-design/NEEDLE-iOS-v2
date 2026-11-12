@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.ComponentName
 import android.app.WallpaperManager
 import android.provider.Settings
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.LinearEasing
@@ -23,6 +24,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -64,8 +68,11 @@ class MainActivity : ComponentActivity() {
         }
         window.statusBarColor = android.graphics.Color.rgb(8, 6, 9)
         window.navigationBarColor = android.graphics.Color.rgb(8, 6, 9)
+        intent?.data?.let { SpotifyDirect.handleRedirect(this, it) }
         setContent {
             NeedleScreen(
+                initialClientId = SpotifyDirect.savedClientId(this),
+                onDirectConnect = { clientId -> SpotifyDirect.startAuthorization(this, clientId) },
                 onConnectSpotify = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                 onSetWallpaper = {
                     val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
@@ -77,11 +84,42 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.data?.let { SpotifyDirect.handleRedirect(this, it) }
+    }
 }
 
 @Composable
-fun NeedleScreen(onConnectSpotify: () -> Unit, onSetWallpaper: () -> Unit) {
+fun NeedleScreen(
+    onConnectSpotify: () -> Unit,
+    onSetWallpaper: () -> Unit,
+    onDirectConnect: (String) -> Unit,
+    initialClientId: String
+) {
+    val context = LocalContext.current
+    var clientId by remember { mutableStateOf(initialClientId) }
+    var connectMessage by remember { mutableStateOf("Direct Spotify connection uses your own Client ID.") }
     var playbackPosition by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val playback = withContext(Dispatchers.IO) {
+                try { SpotifyDirect.fetchCurrentPlayback(context) } catch (_: Exception) { null }
+            }
+            if (playback != null) {
+                NeedleMusicState.title.value = playback.title
+                NeedleMusicState.artist.value = playback.artist
+                NeedleMusicState.connected.value = true
+                NeedleMusicState.positionMs.value = playback.progressMs
+                NeedleMusicState.playing.value = playback.isPlaying
+                NeedleMusicState.positionUpdatedAt.value = SystemClock.elapsedRealtime()
+            }
+            delay(5000)
+        }
+    }
     val trackTitle = NeedleMusicState.title.value
     val trackArtist = NeedleMusicState.artist.value
 
@@ -212,10 +250,31 @@ fun NeedleScreen(onConnectSpotify: () -> Unit, onSetWallpaper: () -> Unit) {
                             Box(Modifier.fillMaxWidth(.34f).fillMaxHeight().background(Crimson, CircleShape))
                         }
                         Spacer(Modifier.height(16.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("CONNECT SPOTIFY", color = SoftWhite, fontSize = 10.sp, letterSpacing = 2.sp, modifier = Modifier.clickable { onConnectSpotify() })
-                            Text("DESIGNED FOR S24 ULTRA", color = SoftWhite.copy(alpha = .4f), fontSize = 8.sp, letterSpacing = 1.sp)
-                        }
+                        Text("SPOTIFY CLIENT ID", color = Crimson, fontSize = 9.sp, letterSpacing = 2.sp)
+                        Spacer(Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = clientId,
+                            onValueChange = { clientId = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Paste Client ID") }
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                try {
+                                    onDirectConnect(clientId.trim())
+                                    connectMessage = "Spotify authorization opened. Approve access in Spotify."
+                                } catch (error: Exception) {
+                                    connectMessage = error.message ?: "Could not start Spotify connection."
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("CONNECT SPOTIFY ACCOUNT") }
+                        Text(connectMessage, color = SoftWhite.copy(alpha = .6f), fontSize = 10.sp)
+                        Spacer(Modifier.height(10.dp))
+                        Text("NOTIFICATION ACCESS (BACKUP)", color = SoftWhite, fontSize = 9.sp,
+                            letterSpacing = 1.sp, modifier = Modifier.clickable { onConnectSpotify() })
                         Spacer(Modifier.height(18.dp))
                         Text("SET NEEDLE LOCK SCREEN", color = SoftWhite, fontSize = 10.sp,
                             letterSpacing = 2.sp, modifier = Modifier.fillMaxWidth().clickable { onSetWallpaper() })
