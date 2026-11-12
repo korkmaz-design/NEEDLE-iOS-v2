@@ -58,6 +58,14 @@ class NeedleNotificationListener : NotificationListenerService() {
         super.onListenerConnected()
         createNotificationChannel()
         handler.removeCallbacks(lockScreenTicker)
+        // Pick up Spotify if it was already playing before NEEDLE's listener connected.
+        try {
+            activeNotifications
+                ?.filter { it.packageName == "com.spotify.music" }
+                ?.forEach { onNotificationPosted(it) }
+        } catch (_: SecurityException) {
+            // Android may briefly withhold active notifications while the listener reconnects.
+        }
         handler.post(lockScreenTicker)
     }
 
