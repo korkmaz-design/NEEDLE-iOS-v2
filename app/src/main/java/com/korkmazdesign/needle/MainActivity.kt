@@ -220,7 +220,7 @@ fun NeedleScreen(
                         (progress * words.size).toInt().coerceIn(0, words.lastIndex) else -1
                     val wordProgress = if (words.isNotEmpty())
                         (progress * words.size - activeWord).coerceIn(0f, 1f) else 0f
-                    val density = drawContext.density
+                    val density = drawContext.density.density
                     val w = size.width
                     val h = size.height
                     val count = maxOf(12, words.size)
