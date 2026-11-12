@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {\n        super.onRequestPermissionsResult(requestCode, permissions, grantResults)\n        if (requestCode == 7101 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) NeedleAudioReactive.start()\n    }\n\n    override fun onDestroy() {\n        NeedleAudioReactive.stop()\n        super.onDestroy()\n    }\n\n    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         intent.data?.let { SpotifyDirect.handleRedirect(this, it) }
@@ -197,7 +197,7 @@ fun NeedleScreen(
                         val angle = i * 2.399 + pulse * 0.18f + lyricPhase + sin(pulse + i + lyricPhase) * 0.08f
                         val scatter = 34f + (i % 9) * 24f
                         val gather = 1f - lyricReveal * 0.22f
-                        val radius = (scatter * gather + sin(pulse * 2f + i + lyricPhase) * (9f + 7f * lyricReveal)) * pulse
+                        val audio = NeedleAudioReactive.level\n                        val radius = (scatter * gather + sin(pulse * 2f + i + lyricPhase) * (9f + 7f * lyricReveal) + audio * (18f + (i % 6) * 5f)) * pulse
                         Offset(cx + cos(angle).toFloat() * radius, cy + sin(angle).toFloat() * radius * 1.15f)
                     }
                     points.forEachIndexed { i, p ->
@@ -207,7 +207,7 @@ fun NeedleScreen(
                         }.forEach { q ->
                             drawLine(Crimson.copy(alpha = .04f + lyricReveal * .34f), p, q, strokeWidth = 0.8f + lyricReveal * 0.65f)
                         }
-                        drawCircle(Color.White.copy(alpha = .85f), radius = if (i % 5 == 0) 3.2f else 1.7f, center = p)
+                        drawCircle(Color.White.copy(alpha = .85f), radius = (if (i % 5 == 0) 3.2f else 1.7f) + NeedleAudioReactive.level * 2.8f, center = p)
                         if (i % 5 == 0) drawCircle(Crimson.copy(alpha = .22f), radius = 9f * pulse, center = p)
                     }
                     for (i in 0 until 54) {
