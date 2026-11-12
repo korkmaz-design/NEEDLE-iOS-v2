@@ -67,7 +67,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
             canvas.drawRect(0f, 0f, w, h, paint)
             paint.shader = null
 
-            val audio = NeedleAudioReactive.level
+            val audio = NeedleAudioReactive.level.coerceIn(0f, 1f)
             val current = NeedleMusicState.lyrics.value
             val pos = NeedleMusicState.positionMs.value
             val active = current.indexOfLast { it.timeMs <= pos }
@@ -76,31 +76,55 @@ class NeedleLiveWallpaperService : WallpaperService() {
             val duration = if (line != null && nextTime != null) (nextTime - line.timeMs).coerceAtLeast(1000L) else 4000L
             val progress = if (line != null) ((pos - line.timeMs).toFloat() / duration).coerceIn(0f, .999f) else 0f
             val words = line?.text?.trim()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
-            val wordIndex = if (words.isNotEmpty()) (progress * words.size).toInt().coerceIn(0, words.lastIndex) else 0
-            val wordProgress = if (words.isNotEmpty()) (progress * words.size - wordIndex).coerceIn(0f, 1f) else 0f
-            val centerX = w * .5f + ((wordIndex - (words.size - 1) / 2f) * 23f).coerceIn(-w * .34f, w * .34f)
-            // Constellation is deliberately visible on a phone lock screen: larger nodes,
-            // brighter links, and positioned immediately above the lyric.
-            val centerY = h * .585f
-            val offsets = listOf(-30f to 8f, -9f to -25f, 19f to -12f, 31f to 20f, -5f to 29f)
-            val nodes = offsets.mapIndexed { i, o ->
-                Pair(centerX + o.first + sin(frame + i) * (2.5f + audio * 3f),
-                    centerY + o.second + cos(frame + i) * 2.5f)
+            val activeWord = if (words.isNotEmpty()) (progress * words.size).toInt().coerceIn(0, words.lastIndex) else -1
+            val wordProgress = if (words.isNotEmpty()) (progress * words.size - activeWord).coerceIn(0f, 1f) else 0f
+            val count = maxOf(12, words.size)
+            val points = (0 until count).map { i ->
+                val x = w * (.045f + .91f * i / (count - 1).coerceAtLeast(1))
+                val y = h * (.49f + sin(i * 1.31f + frame * 1.2f) * .105f + cos(i * .63f + frame) * .035f)
+                Pair(x, y)
             }
-            val links = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4, 4 to 0)
-            val revealed = (wordProgress * (links.size + 1)).toInt().coerceIn(0, links.size)
-            paint.strokeWidth = 2.0f
-            paint.color = Color.argb(225, 255, 49, 85)
-            links.take(revealed).forEach { (a, b) ->
-                canvas.drawLine(nodes[a].first, nodes[a].second, nodes[b].first, nodes[b].second, paint)
+            for (i in 0 until 115) {
+                val x = (i * 83f % w)
+                val y = (i * 137f % h)
+                val alpha = (45 + 55 * (0.5f + 0.5f * sin(frame * 2f + i))).toInt().coerceIn(20, 100)
+                paint.style = Paint.Style.FILL
+                paint.color = Color.argb(alpha, 255, 240, 246)
+                canvas.drawCircle(x, y, if (i % 9 == 0) 1.8f else .9f, paint)
             }
-            nodes.forEachIndexed { i, p ->
-                if (i <= revealed) {
-                    paint.color = Color.argb(250, 255, 250, 252)
-                    canvas.drawCircle(p.first, p.second, 3.0f + audio * .8f, paint)
-                    paint.color = Color.argb(75, 255, 49, 85)
-                    canvas.drawCircle(p.first, p.second, 8.0f + audio, paint)
-                }
+            paint.style = Paint.Style.STROKE
+            for (i in 0 until points.lastIndex) {
+                val reveal = if (activeWord < 0) .12f else if (i < activeWord) .78f else if (i == activeWord) wordProgress else .16f
+                paint.color = Color.argb((reveal * 230).toInt().coerceIn(20, 230), 255, 245, 250)
+                paint.strokeWidth = 1.0f + audio * 1.1f
+                canvas.drawLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, paint)
+            }
+            paint.style = Paint.Style.FILL
+            points.forEachIndexed { i, p ->
+                val activePoint = i == activeWord
+                paint.color = Color.argb(if (activePoint) 75 else 25, 255, 49, 85)
+                canvas.drawCircle(p.first, p.second, if (activePoint) 17f + audio * 5f else 5f, paint)
+                paint.color = Color.argb(if (activePoint) 255 else 195, 255, 250, 252)
+                canvas.drawCircle(p.first, p.second, if (activePoint) 3.2f + audio * 1.5f else 1.7f, paint)
+            }
+            paint.textAlign = Paint.Align.CENTER
+            words.forEachIndexed { i, word ->
+                val p = points.getOrNull(i) ?: return@forEachIndexed
+                paint.color = if (i == activeWord) Color.WHITE else Color.argb(185, 255, 235, 242)
+                paint.typeface = Typeface.create("sans-serif", if (i == activeWord) Typeface.BOLD else Typeface.NORMAL)
+                paint.textSize = if (i == activeWord) (w * .045f).coerceIn(19f, 31f) else (w * .023f).coerceIn(10f, 16f)
+                var shown = word
+                val maxText = w / maxOf(4f, words.size.toFloat()) * .92f
+                while (shown.length > 2 && paint.measureText(shown) > maxText) shown = shown.dropLast(1)
+                if (shown != word) shown += "…"
+                canvas.drawText(shown, p.first, p.second + if (i == activeWord) 31f else 19f, paint)
+            }
+            if (activeWord >= 0 && activeWord < points.lastIndex) {
+                val p = points[activeWord]
+                val next = points[activeWord + 1]
+                paint.color = Color.WHITE
+                canvas.drawCircle(p.first + (next.first - p.first) * wordProgress,
+                    p.second + (next.second - p.second) * wordProgress, 2.8f, paint)
             }
             paint.color = Color.argb(135, 255, 255, 255)
             for (i in 0 until 65) {
@@ -117,11 +141,10 @@ class NeedleLiveWallpaperService : WallpaperService() {
             paint.textSize = 10f
             canvas.drawText("MUSIC IN MOTION", w * .5f, h * .19f, paint)
 
-            val displayLine = line?.text ?: NeedleMusicState.title.value.takeIf { it != "No track connected" } ?: "THE NIGHT IS STILL YOUNG"
             paint.color = Color.WHITE
-            paint.typeface = Typeface.create("serif", Typeface.NORMAL)
-            paint.textSize = (w * .055f).coerceIn(42f, 68f)
-            canvas.drawText(ellipsize(displayLine, paint, w * .90f), w * .5f, h * .69f, paint)
+            paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            paint.textSize = (w * .045f).coerceIn(34f, 54f)
+            canvas.drawText(ellipsize(words.getOrNull(activeWord).orEmpty(), paint, w * .90f), w * .5f, h * .69f, paint)
             paint.color = Color.argb(170, 230, 210, 220)
             paint.textSize = (w * .027f).coerceIn(22f, 34f)
             canvas.drawText(ellipsize(NeedleMusicState.artist.value, paint, w * .82f), w * .5f, h * .735f, paint)
