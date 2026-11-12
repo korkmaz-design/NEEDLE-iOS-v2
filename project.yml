@@ -15,6 +15,9 @@ targets:
     sources:
       - path: NEEDLE
       - path: Shared/NEEDLEAttributes.swift
+    dependencies:
+      - target: NEEDLEWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.korkmazdesign.needle
@@ -36,5 +39,3 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         SKIP_INSTALL: YES
         CODE_SIGN_STYLE: Automatic
-    dependencies:
-      - target: NEEDLE
