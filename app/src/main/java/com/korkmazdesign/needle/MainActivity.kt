@@ -265,7 +265,10 @@ fun NeedleScreen(
                         labelPaint.color = if (i == activeWord) android.graphics.Color.WHITE
                             else android.graphics.Color.argb(175, 255, 235, 242)
                         labelPaint.typeface = AndroidTypeface.create("sans-serif", if (i == activeWord) AndroidTypeface.BOLD else AndroidTypeface.NORMAL)
-                        labelPaint.textSize = (if (i == activeWord) 19f else 10f) * density
+                        val emphasis = if (i == activeWord)
+                            (1.0f + .48f * (0.5f + 0.5f * sin(pulse * 2.4f)) + audio * .18f)
+                            else if (i == activeWord - 1 || i == activeWord + 1) 1.12f else .82f
+                        labelPaint.textSize = (if (i == activeWord) 20f else 10f) * density * emphasis
                         val maxText = w / maxOf(4f, words.size.toFloat()) * .92f
                         var shown = word
                         while (shown.length > 2 && labelPaint.measureText(shown) > maxText) shown = shown.dropLast(1)
@@ -306,7 +309,9 @@ fun NeedleScreen(
                         val lineProgress = if (currentLine != null) ((playbackPosition - currentLine.timeMs).toFloat() / span).coerceIn(0f, .999f) else 0f
                         val wi = if (currentWords.isNotEmpty()) (lineProgress * currentWords.size).toInt().coerceIn(0, currentWords.lastIndex) else 0
                         Text(currentWords.getOrNull(wi).orEmpty(),
-                            color = SoftWhite, fontSize = 34.sp, lineHeight = 40.sp,
+                            color = SoftWhite,
+                            fontSize = (30f + 12f * (0.5f + 0.5f * sin(pulse * 2.4f)) + NeedleAudioReactive.level.coerceIn(0f, 1f) * 3f).sp,
+                            lineHeight = 44.sp,
                             fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(8.dp))
                         Text("WORD IN CONSTELLATION", color = SoftWhite.copy(alpha = .48f), fontSize = 9.sp, letterSpacing = 2.sp)
