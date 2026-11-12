@@ -30,7 +30,8 @@ object NeedleMusicState {
     val lyricsMessage = mutableStateOf("Waiting for a song…")
     val positionMs = mutableStateOf(0L)
     val playing = mutableStateOf(false)
-    val positionUpdatedAt = mutableStateOf(0L)\n    val audioLevel = mutableStateOf(0f)
+    val positionUpdatedAt = mutableStateOf(0L)
+    val audioLevel = mutableStateOf(0f)
 }
 
 class NeedleNotificationListener : NotificationListenerService() {
@@ -155,7 +156,8 @@ class NeedleNotificationListener : NotificationListenerService() {
             .setContentTitle(title)
             .setContentText(lyric)
             .setSubText(NeedleMusicState.artist.value)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$lyric\n${NeedleMusicState.artist.value}"))
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$lyric
+${NeedleMusicState.artist.value}"))
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setOngoing(true)
