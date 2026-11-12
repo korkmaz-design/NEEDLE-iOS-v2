@@ -67,11 +67,12 @@ class NeedleLiveWallpaperService : WallpaperService() {
             canvas.drawRect(0f, 0f, w, h, paint)
             paint.shader = null
 
+            val audio = NeedleAudioReactive.level
             val points = ArrayList<Pair<Float, Float>>()
             for (i in 0 until 46) {
                 val lyricPhase = if (NeedleMusicState.lyrics.value.isNotEmpty()) (NeedleMusicState.lyrics.value.indexOfLast { it.timeMs <= NeedleMusicState.positionMs.value }.coerceAtLeast(0) * .31f) else 0f
                 val angle = i * 2.399f + lyricPhase + .10f * sin(frame + i)
-                val audio = NeedleAudioReactive.level\n                val radius = (30f + (i % 8) * 25f + audio * (18f + (i % 6) * 5f)) * (1f + .055f * sin(frame + i))
+                val radius = (30f + (i % 8) * 25f + audio * (18f + (i % 6) * 5f)) * (1f + .055f * sin(frame + i))
                 val x = w * .5f + cos(angle) * radius
                 val y = h * .43f + sin(angle) * radius * 1.45f
                 points.add(Pair(x, y))
