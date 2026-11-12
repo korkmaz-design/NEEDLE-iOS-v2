@@ -71,7 +71,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         void main() {
             vec2 p = gl_PointCoord - vec2(0.5);
             float d = length(p);
-            float glow = mix(1.0, smoothstep(0.5, 0.05, d), uPointMode);
+            float glow = mix(1.0, 1.0 - smoothstep(0.045, 0.5, d), uPointMode);
             gl_FragColor = vec4(uColor.rgb, uColor.a * vAlpha * glow);
         }
     """
@@ -111,7 +111,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         colorHandle = GLES20.glGetUniformLocation(program, "uColor")
         pointSizeHandle = GLES20.glGetUniformLocation(program, "uPointSize")
         pointModeHandle = GLES20.glGetUniformLocation(program, "uPointMode")
-        GLES20.glClearColor(.025f, .012f, .025f, 1f)
+        GLES20.glClearColor(.008f, .006f, .012f, 1f)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
     }
@@ -139,7 +139,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
             starPositions[i * 2 + 1] = stars[i * 3 + 1]
             starAlpha[i] = (stars[i * 3 + 2] * (.58f + .42f * sin(t * 1.8f + i))).coerceIn(.08f, .8f)
         }
-        drawPoints(starPositions, starAlpha, 2.2f, floatArrayOf(.94f, .88f, .92f, 1f))
+        drawPoints(starPositions, starAlpha, 2.2f, floatArrayOf(.78f, .66f, .72f, .92f))
 
         val wordCount = state.words.size.coerceAtLeast(2)
         val nodes = FloatArray(wordCount * 2)
@@ -161,22 +161,22 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
             val y2 = nodes[(active + 1) * 2 + 1]
             val line = floatArrayOf(x1, y1, x1 + (x2 - x1) * progress, y1 + (y2 - y1) * progress)
             drawLines(line, floatArrayOf(.25f, .95f), 3f,
-                floatArrayOf(1f, .78f, .86f, .9f))
+                floatArrayOf(1f, .48f, .60f, .96f))
             drawPoints(floatArrayOf(x1, y1, x2, y2),
                 floatArrayOf(.7f, progress), 12f + state.audio * 8f,
-                floatArrayOf(1f, .18f, .34f, .9f))
+                floatArrayOf(.92f, .035f, .16f, .94f))
         }
 
         val nodeAlpha = FloatArray(wordCount) { i ->
             if (i == active) 1f else if (i == active + 1) .72f else .24f
         }
-        drawPoints(nodes, nodeAlpha, 5f, floatArrayOf(1f, .88f, .93f, 1f))
+        drawPoints(nodes, nodeAlpha, 5f, floatArrayOf(.90f, .76f, .81f, .96f))
         if (active >= 0 && active < wordCount) {
             val pulse = 1f + .28f * sin(t * 5.2f) + state.audio * .18f
             drawPoints(floatArrayOf(nodes[active * 2], nodes[active * 2 + 1]),
-                floatArrayOf(1f), 23f * pulse, floatArrayOf(1f, .12f, .31f, .75f))
+                floatArrayOf(1f), 23f * pulse, floatArrayOf(.88f, .018f, .12f, .82f))
             drawPoints(floatArrayOf(nodes[active * 2], nodes[active * 2 + 1]),
-                floatArrayOf(1f), 7f * pulse, floatArrayOf(1f, .94f, .97f, 1f))
+                floatArrayOf(1f), 7f * pulse, floatArrayOf(1f, .82f, .87f, 1f))
         }
     }
 
