@@ -1,6 +1,12 @@
 package com.korkmazdesign.needle
 
 import android.content.Context
+import android.graphics.SurfaceTexture
+import android.media.MediaPlayer
+import android.opengl.GLES11Ext
+import android.view.Surface
+import android.content.res.AssetFileDescriptor
+import android.util.Log
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
@@ -45,13 +51,38 @@ object NeedleFrameFactory {
 class NeedleGlSurfaceView(context: Context) : GLSurfaceView(context) {
     init {
         setEGLContextClientVersion(2)
-        setRenderer(NeedleGlRenderer())
+        setRenderer(NeedleGlRenderer(context))
         renderMode = RENDERMODE_CONTINUOUSLY
         preserveEGLContextOnPause = true
     }
 }
 
-private class NeedleGlRenderer : GLSurfaceView.Renderer {
+private class NeedleGlRenderer(private val context: Context) : GLSurfaceView.Renderer {
+    private val videoVertexShader = """
+        attribute vec4 aPosition; attribute vec2 aTexCoord;
+        uniform mat4 uTexMatrix; varying vec2 vTexCoord;
+        void main() { gl_Position = aPosition; vTexCoord = (uTexMatrix * vec4(aTexCoord, 0.0, 1.0)).xy; }
+    """
+    private val videoFragmentShader = """
+        #extension GL_OES_EGL_image_external : require
+        precision mediump float; uniform samplerExternalOES uVideo; varying vec2 vTexCoord;
+        void main() { gl_FragColor = texture2D(uVideo, vTexCoord); }
+    """
+    private var videoProgram = 0
+    private var videoTexture = 0
+    private var videoSurfaceTexture: SurfaceTexture? = null
+    private var videoSurface: Surface? = null
+    private var mediaPlayer: MediaPlayer? = null
+    @Volatile private var videoFrameAvailable = false
+    private val videoMatrix = FloatArray(16)
+    private var videoPositionHandle = 0
+    private var videoTexCoordHandle = 0
+    private var videoMatrixHandle = 0
+    private var videoSamplerHandle = 0
+    private val videoQuad = ByteBuffer.allocateDirect(64).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
+        put(floatArrayOf(-1f,-1f,0f,1f, 1f,-1f,1f,1f, -1f,1f,0f,0f, 1f,1f,1f,0f)); position(0)
+    }
+
     private val vertexShader = """
         attribute vec2 aPosition;
         attribute float aAlpha;
@@ -117,6 +148,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         pointSizeHandle = GLES20.glGetUniformLocation(program, "uPointSize")
         pointModeHandle = GLES20.glGetUniformLocation(program, "uPointMode")
         GLES20.glClearColor(.008f, .006f, .012f, 1f)
+        setupVideoBackground()
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
     }
@@ -131,6 +163,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         val t = (System.nanoTime() - startNs) / 1_000_000_000f
         val state = NeedleGlState.frame
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+        drawVideoBackground()
         GLES20.glUseProgram(program)
 
         // Animated crimson light field. Multiple drifting radial glows create depth.
@@ -230,6 +263,57 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
             drawPoints(floatArrayOf(cx, cy),
                 floatArrayOf(1f), 7f * pulse, floatArrayOf(1f, .82f, .87f, 1f))
         }
+    }
+
+
+    private fun setupVideoBackground() {
+        try {
+            val ids = IntArray(1); GLES20.glGenTextures(1, ids, 0); videoTexture = ids[0]
+            GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, videoTexture)
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+            GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+            videoProgram = GLES20.glCreateProgram().also {
+                GLES20.glAttachShader(it, compile(GLES20.GL_VERTEX_SHADER, videoVertexShader))
+                GLES20.glAttachShader(it, compile(GLES20.GL_FRAGMENT_SHADER, videoFragmentShader)); GLES20.glLinkProgram(it)
+            }
+            val linked = IntArray(1); GLES20.glGetProgramiv(videoProgram, GLES20.GL_LINK_STATUS, linked, 0)
+            check(linked[0] == GLES20.GL_TRUE) { GLES20.glGetProgramInfoLog(videoProgram) }
+            videoPositionHandle = GLES20.glGetAttribLocation(videoProgram, "aPosition")
+            videoTexCoordHandle = GLES20.glGetAttribLocation(videoProgram, "aTexCoord")
+            videoMatrixHandle = GLES20.glGetUniformLocation(videoProgram, "uTexMatrix")
+            videoSamplerHandle = GLES20.glGetUniformLocation(videoProgram, "uVideo")
+            android.opengl.Matrix.setIdentityM(videoMatrix, 0)
+            videoSurfaceTexture = SurfaceTexture(videoTexture).also { it.setOnFrameAvailableListener { videoFrameAvailable = true } }
+            videoSurface = Surface(videoSurfaceTexture)
+            val afd: AssetFileDescriptor = context.assets.openFd("needle_background_clean_final.mp4")
+            val player = MediaPlayer(); mediaPlayer = player
+            player.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length); afd.close()
+            player.setSurface(videoSurface); player.isLooping = true
+            player.setOnPreparedListener { mp ->
+                try { videoSurfaceTexture?.setDefaultBufferSize(mp.videoWidth.coerceAtLeast(1), mp.videoHeight.coerceAtLeast(1)); mp.start() }
+                catch (e: Exception) { Log.e("NEEDLE_VIDEO", "Video start failed", e) }
+            }
+            player.setOnErrorListener { _, what, extra -> Log.e("NEEDLE_VIDEO", "Playback error $what/$extra"); true }
+            player.prepareAsync()
+        } catch (e: Exception) { Log.e("NEEDLE_VIDEO", "Background video setup failed", e) }
+    }
+
+    private fun drawVideoBackground() {
+        val st = videoSurfaceTexture ?: return
+        if (videoFrameAvailable) {
+            try { st.updateTexImage(); st.getTransformMatrix(videoMatrix); videoFrameAvailable = false }
+            catch (e: Exception) { Log.w("NEEDLE_VIDEO", "Texture update failed", e); return }
+        } else if (mediaPlayer == null) return
+        GLES20.glUseProgram(videoProgram); GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, videoTexture)
+        GLES20.glUniform1i(videoSamplerHandle, 0); GLES20.glUniformMatrix4fv(videoMatrixHandle, 1, false, videoMatrix, 0)
+        videoQuad.position(0); GLES20.glEnableVertexAttribArray(videoPositionHandle); GLES20.glEnableVertexAttribArray(videoTexCoordHandle)
+        GLES20.glVertexAttribPointer(videoPositionHandle, 2, GLES20.GL_FLOAT, false, 16, videoQuad)
+        videoQuad.position(2); GLES20.glVertexAttribPointer(videoTexCoordHandle, 2, GLES20.GL_FLOAT, false, 16, videoQuad)
+        GLES20.glDisable(GLES20.GL_BLEND); GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4); GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glDisableVertexAttribArray(videoPositionHandle); GLES20.glDisableVertexAttribArray(videoTexCoordHandle)
     }
 
     private fun drawPoints(data: FloatArray, alpha: FloatArray, size: Float, color: FloatArray) {
