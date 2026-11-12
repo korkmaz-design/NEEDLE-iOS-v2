@@ -68,6 +68,11 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7101)
         }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 7102)
+        } else {
+            NeedleAudioReactive.start()
+        }
         window.statusBarColor = android.graphics.Color.rgb(8, 6, 9)
         window.navigationBarColor = android.graphics.Color.rgb(8, 6, 9)
         intent?.data?.let { SpotifyDirect.handleRedirect(this, it) }
@@ -89,7 +94,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 7101 && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) NeedleAudioReactive.start()
+        if (requestCode == 7102 && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) NeedleAudioReactive.start()
     }
 
     override fun onDestroy() {
