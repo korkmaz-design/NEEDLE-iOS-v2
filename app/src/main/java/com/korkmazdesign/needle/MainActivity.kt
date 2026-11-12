@@ -14,6 +14,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -50,6 +51,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -172,6 +174,7 @@ fun NeedleScreen(
     val activeLyric = lyricLines.indexOfLast { it.timeMs <= playbackPosition }
 
     val motion = rememberInfiniteTransition(label = "needle-motion")
+    val lyricReveal by animateFloatAsState(targetValue = if (activeLyric >= 0) 1f else 0f, animationSpec = tween(1100), label = "lyric-reveal")
     val pulse = motion.animateFloat(
         initialValue = 0.82f, targetValue = 1.16f,
         animationSpec = infiniteRepeatable(tween(1900, easing = LinearEasing), RepeatMode.Reverse),
@@ -190,16 +193,19 @@ fun NeedleScreen(
                     val cx = size.width * .5f
                     val cy = size.height * .43f
                     val points = (0 until 64).map { i ->
-                        val angle = i * 2.399 + pulse * 0.18f + sin(pulse + i) * 0.08f
-                        val radius = (28f + (i % 9) * 19f + sin(pulse * 2f + i) * 16f) * pulse
+                        val lyricPhase = if (activeLyric >= 0) activeLyric * 0.37f else 0f
+                        val angle = i * 2.399 + pulse * 0.18f + lyricPhase + sin(pulse + i + lyricPhase) * 0.08f
+                        val scatter = 34f + (i % 9) * 24f
+                        val gather = 1f - lyricReveal * 0.22f
+                        val radius = (scatter * gather + sin(pulse * 2f + i + lyricPhase) * (9f + 7f * lyricReveal)) * pulse
                         Offset(cx + cos(angle).toFloat() * radius, cy + sin(angle).toFloat() * radius * 1.15f)
                     }
                     points.forEachIndexed { i, p ->
                         points.drop(i + 1).filter { q ->
                             val dx = p.x - q.x; val dy = p.y - q.y
-                            dx * dx + dy * dy < 122f * 122f
+                            dx * dx + dy * dy < (42f + lyricReveal * 82f) * (42f + lyricReveal * 82f)
                         }.forEach { q ->
-                            drawLine(Crimson.copy(alpha = .23f), p, q, strokeWidth = 1.1f)
+                            drawLine(Crimson.copy(alpha = .04f + lyricReveal * .34f), p, q, strokeWidth = 0.8f + lyricReveal * 0.65f)
                         }
                         drawCircle(Color.White.copy(alpha = .85f), radius = if (i % 5 == 0) 3.2f else 1.7f, center = p)
                         if (i % 5 == 0) drawCircle(Crimson.copy(alpha = .22f), radius = 9f * pulse, center = p)
@@ -224,12 +230,12 @@ fun NeedleScreen(
                     Spacer(Modifier.height(14.dp))
                     if (lyricLines.isNotEmpty()) {
                         Text(lyricLines.getOrNull(activeLyric)?.text ?: lyricLines.first().text,
-                            color = SoftWhite, fontSize = 29.sp, lineHeight = 39.sp,
-                            fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
+                            color = SoftWhite, fontSize = 40.sp, lineHeight = 49.sp,
+                            fontFamily = FontFamily.Serif, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(12.dp))
                         Text(lyricLines.getOrNull(activeLyric + 1)?.text.orEmpty(),
-                            color = SoftWhite.copy(alpha = .42f), fontSize = 18.sp,
-                            lineHeight = 26.sp, textAlign = TextAlign.Center)
+                            color = SoftWhite.copy(alpha = .48f), fontSize = 23.sp,
+                            lineHeight = 31.sp, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
                     } else {
                         Text(NeedleMusicState.lyricsMessage.value, color = SoftWhite.copy(alpha = .75f),
                             fontSize = 16.sp, textAlign = TextAlign.Center)
