@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
         intent?.data?.let { SpotifyDirect.handleRedirect(this, it) }
         setContent {
             NeedleScreen(
-                initialClientId = SpotifyDirect.savedClientId(this),
+                initialClientId = SpotifyDirect.savedClientId(this).ifBlank { "1a6f153c4e9e432dbfd0de09a71d23c7" },
                 onDirectConnect = { clientId -> SpotifyDirect.startAuthorization(this, clientId) },
                 onConnectSpotify = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                 onSetWallpaper = {
