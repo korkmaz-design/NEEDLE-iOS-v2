@@ -1,6 +1,8 @@
 package com.korkmazdesign.needle
 
 import android.os.Bundle
+import android.content.Intent
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.LinearEasing
@@ -10,6 +12,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -40,12 +43,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.rgb(8, 6, 9)
         window.navigationBarColor = android.graphics.Color.rgb(8, 6, 9)
-        setContent { NeedleScreen() }
+        setContent { NeedleScreen(onConnectSpotify = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }) }
     }
 }
 
 @Composable
-fun NeedleScreen() {
+fun NeedleScreen(onConnectSpotify: () -> Unit) {
     val motion = rememberInfiniteTransition(label = "needle-motion")
     val pulse = motion.animateFloat(
         initialValue = 0.82f, targetValue = 1.16f,
@@ -104,18 +107,18 @@ fun NeedleScreen() {
                     Column(
                         Modifier.fillMaxWidth().background(Color(0xAA100B10), RoundedCornerShape(24.dp)).padding(20.dp)
                     ) {
-                        Text("NO TRACK CONNECTED", color = Crimson, fontSize = 9.sp, letterSpacing = 2.sp)
+                        Text(if (NeedleMusicState.connected.value) "SPOTIFY CONNECTED" else "SPOTIFY CONNECTION", color = Crimson, fontSize = 9.sp, letterSpacing = 2.sp)
                         Spacer(Modifier.height(8.dp))
-                        Text("Connect Spotify to begin", color = SoftWhite, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                        Text(NeedleMusicState.title.value, color = SoftWhite, fontSize = 17.sp, fontWeight = FontWeight.Medium)
                         Spacer(Modifier.height(5.dp))
-                        Text("Your music. Reimagined as light.", color = SoftWhite.copy(alpha = .55f), fontSize = 12.sp)
+                        Text(NeedleMusicState.artist.value, color = SoftWhite.copy(alpha = .55f), fontSize = 12.sp)
                         Spacer(Modifier.height(16.dp))
                         Box(Modifier.fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = .12f), CircleShape)) {
                             Box(Modifier.fillMaxWidth(.34f).fillMaxHeight().background(Crimson, CircleShape))
                         }
                         Spacer(Modifier.height(16.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("NEEDLE", color = SoftWhite, fontSize = 10.sp, letterSpacing = 2.sp)
+                            Text("CONNECT SPOTIFY", color = SoftWhite, fontSize = 10.sp, letterSpacing = 2.sp, modifier = Modifier.clickable { onConnectSpotify() })
                             Text("DESIGNED FOR S24 ULTRA", color = SoftWhite.copy(alpha = .4f), fontSize = 8.sp, letterSpacing = 1.sp)
                         }
                     }
