@@ -87,6 +87,8 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
     private val stars = FloatArray(260 * 3)
     private val starPositions = FloatArray(260 * 2)
     private val starAlpha = FloatArray(260)
+    private val rippleVertices = FloatArray(48 * 4)
+    private val rippleAlpha = FloatArray(48 * 2)
     private val positionBuffer: FloatBuffer = ByteBuffer.allocateDirect(2048 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
     private val alphaBuffer: FloatBuffer = ByteBuffer.allocateDirect(1024 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
 
