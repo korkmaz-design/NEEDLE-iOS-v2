@@ -215,81 +215,75 @@ fun NeedleScreen(
 
 
 
-                Column(
-                    Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 30.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    Modifier.fillMaxSize().padding(horizontal = 30.dp, vertical = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(28.dp)
                 ) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("N E E D L E", color = SoftWhite, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 3.sp)
-                        Text("BETA  01", color = Crimson, fontSize = 10.sp, letterSpacing = 2.sp)
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Text("NOW PLAYING", color = Crimson, fontSize = 10.sp, letterSpacing = 4.sp)
-                    Spacer(Modifier.height(14.dp))
-                    if (lyricLines.isNotEmpty()) {
-                        val currentWords = lyricLines.getOrNull(activeLyric)?.text?.trim()?.split(Regex("\\s+")).orEmpty()
-                        val nextTime = lyricLines.getOrNull(activeLyric + 1)?.timeMs
-                        val currentLine = lyricLines.getOrNull(activeLyric)
-                        val span = if (currentLine != null && nextTime != null) (nextTime - currentLine.timeMs).coerceAtLeast(1000L) else 4000L
-                        val lineProgress = if (currentLine != null) ((playbackPosition - currentLine.timeMs).toFloat() / span).coerceIn(0f, .999f) else 0f
-                        val wi = if (currentWords.isNotEmpty()) (lineProgress * currentWords.size).toInt().coerceIn(0, currentWords.lastIndex) else 0
-                        Text(currentWords.getOrNull(wi).orEmpty(),
-                            color = SoftWhite,
-                            fontSize = (30f + 12f * (0.5f + 0.5f * sin(pulse * 2.4f)) + NeedleAudioReactive.level.coerceIn(0f, 1f) * 3f).sp,
-                            lineHeight = 44.sp,
-                            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(8.dp))
-                        Text("WORD IN CONSTELLATION", color = SoftWhite.copy(alpha = .48f), fontSize = 9.sp, letterSpacing = 2.sp)
-                    } else {
-                        Text(NeedleMusicState.lyricsMessage.value, color = SoftWhite.copy(alpha = .75f),
-                            fontSize = 16.sp, textAlign = TextAlign.Center)
-                    }
-                    Spacer(Modifier.height(18.dp))
-                    Text("LINE-TIMED LYRICS • ESTIMATED WORD FLOW", color = SoftWhite.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 2.sp)
-                    Spacer(Modifier.weight(1f))
                     Column(
-                        Modifier.fillMaxWidth().background(Color(0xAA100B10), RoundedCornerShape(24.dp)).padding(20.dp)
+                        Modifier.weight(1f).fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("N E E D L E", color = SoftWhite, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 3.sp)
+                                Text("BETA  01", color = Crimson, fontSize = 10.sp, letterSpacing = 2.sp)
+                            }
+                            Spacer(Modifier.height(26.dp))
+                            Text("NOW PLAYING", color = Crimson, fontSize = 10.sp, letterSpacing = 4.sp)
+                            Spacer(Modifier.height(12.dp))
+                            if (lyricLines.isNotEmpty()) {
+                                val currentWords = lyricLines.getOrNull(activeLyric)?.text?.trim()?.split(Regex("\\s+")).orEmpty()
+                                val nextTime = lyricLines.getOrNull(activeLyric + 1)?.timeMs
+                                val currentLine = lyricLines.getOrNull(activeLyric)
+                                val span = if (currentLine != null && nextTime != null) (nextTime - currentLine.timeMs).coerceAtLeast(1000L) else 4000L
+                                val lineProgress = if (currentLine != null) ((playbackPosition - currentLine.timeMs).toFloat() / span).coerceIn(0f, .999f) else 0f
+                                val wi = if (currentWords.isNotEmpty()) (lineProgress * currentWords.size).toInt().coerceIn(0, currentWords.lastIndex) else 0
+                                Text(currentWords.getOrNull(wi).orEmpty(), color = SoftWhite,
+                                    fontSize = (30f + 12f * (0.5f + 0.5f * sin(pulse * 2.4f)) + NeedleAudioReactive.level.coerceIn(0f, 1f) * 3f).sp,
+                                    lineHeight = 42.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Start)
+                                Spacer(Modifier.height(6.dp))
+                                Text("WORD IN CONSTELLATION", color = SoftWhite.copy(alpha = .48f), fontSize = 9.sp, letterSpacing = 2.sp)
+                            } else {
+                                Text(NeedleMusicState.lyricsMessage.value, color = SoftWhite.copy(alpha = .75f), fontSize = 14.sp)
+                            }
+                        }
+                        Column {
+                            Text("LINE-TIMED LYRICS • ESTIMATED WORD FLOW", color = SoftWhite.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 1.sp)
+                            Spacer(Modifier.height(6.dp))
+                            Text(NeedleMusicState.title.value, color = SoftWhite, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                            Text(NeedleMusicState.artist.value, color = SoftWhite.copy(alpha = .58f), fontSize = 12.sp, maxLines = 1)
+                        }
+                    }
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight()
+                            .background(Color(0xAA100B10), RoundedCornerShape(22.dp)).padding(18.dp),
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(if (NeedleMusicState.connected.value) "SPOTIFY CONNECTED" else "SPOTIFY CONNECTION", color = Crimson, fontSize = 9.sp, letterSpacing = 2.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(NeedleMusicState.title.value, color = SoftWhite, fontSize = 17.sp, fontWeight = FontWeight.Medium)
-                        Spacer(Modifier.height(5.dp))
-                        Text(NeedleMusicState.artist.value, color = SoftWhite.copy(alpha = .55f), fontSize = 12.sp)
-                        Spacer(Modifier.height(16.dp))
-                        Box(Modifier.fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = .12f), CircleShape)) {
-                            Box(Modifier.fillMaxWidth(.34f).fillMaxHeight().background(Crimson, CircleShape))
-                        }
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text("SPOTIFY CLIENT ID", color = Crimson, fontSize = 9.sp, letterSpacing = 2.sp)
-                        Spacer(Modifier.height(6.dp))
-                        OutlinedTextField(
-                            value = clientId,
-                            onValueChange = { clientId = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            label = { Text("Paste Client ID") }
-                        )
+                        Spacer(Modifier.height(5.dp))
+                        OutlinedTextField(value = clientId, onValueChange = { clientId = it },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true,
+                            label = { Text("Paste Client ID") })
                         Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                try {
-                                    onDirectConnect(clientId.trim())
-                                    connectMessage = "Spotify authorization opened. Approve access in Spotify."
-                                } catch (error: Exception) {
-                                    connectMessage = error.message ?: "Could not start Spotify connection."
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("CONNECT SPOTIFY ACCOUNT") }
-                        Text(connectMessage, color = SoftWhite.copy(alpha = .6f), fontSize = 10.sp)
-                        Spacer(Modifier.height(10.dp))
+                        Button(onClick = {
+                            try {
+                                onDirectConnect(clientId.trim())
+                                connectMessage = "Spotify authorization opened. Approve access in Spotify."
+                            } catch (error: Exception) {
+                                connectMessage = error.message ?: "Could not start Spotify connection."
+                            }
+                        }, modifier = Modifier.fillMaxWidth()) { Text("CONNECT SPOTIFY") }
+                        Text(connectMessage, color = SoftWhite.copy(alpha = .6f), fontSize = 9.sp, maxLines = 2)
+                        Spacer(Modifier.height(12.dp))
                         Text("NOTIFICATION ACCESS (BACKUP)", color = SoftWhite, fontSize = 9.sp,
                             letterSpacing = 1.sp, modifier = Modifier.clickable { onConnectSpotify() })
-                        Spacer(Modifier.height(18.dp))
+                        Spacer(Modifier.height(14.dp))
                         Text("SET NEEDLE LOCK SCREEN", color = SoftWhite, fontSize = 10.sp,
                             letterSpacing = 2.sp, modifier = Modifier.fillMaxWidth().clickable { onSetWallpaper() })
                     }
-                    Spacer(Modifier.height(12.dp))
                 }
             }
         }
