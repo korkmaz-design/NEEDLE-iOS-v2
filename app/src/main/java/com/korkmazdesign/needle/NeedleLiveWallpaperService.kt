@@ -94,16 +94,26 @@ class NeedleLiveWallpaperService : WallpaperService() {
                 canvas.drawCircle(x, y, if (i % 9 == 0) 1.8f else .9f, paint)
             }
             paint.style = Paint.Style.STROKE
-            // Reset the constellation link at every word. Only the current segment
-            // is progressively drawn; old segments no longer remain permanently lit.
-            if (activeWord >= 0 && activeWord < points.lastIndex) {
-                val from = points[activeWord]
-                val to = points[activeWord + 1]
-                val endX = from.first + (to.first - from.first) * wordProgress
-                val endY = from.second + (to.second - from.second) * wordProgress
-                paint.color = Color.argb((205 + audio * 45).toInt().coerceIn(0, 255), 255, 225, 235)
-                paint.strokeWidth = 1.2f + audio * 1.4f
-                canvas.drawLine(from.first, from.second, endX, endY, paint)
+            // Retain every completed constellation edge until the whole phrase is drawn.
+            if (activeWord >= 0) {
+                val reveal = ((activeWord + wordProgress) / (count - 1).toFloat()).coerceIn(0f, 1f)
+                val fade = if (reveal > .94f) ((1f - reveal) / .06f).coerceIn(0f, 1f) else 1f
+                for (edge in 0 until count - 1) {
+                    val from = points[edge]
+                    val to = points[edge + 1]
+                    val progress = when { edge < activeWord -> 1f; edge == activeWord -> wordProgress; else -> 0f }
+                    paint.color = Color.argb(((if (edge <= activeWord) 215 else 0) * fade).toInt().coerceIn(0, 255), 255, 125, 155)
+                    paint.strokeWidth = 1.3f + audio * 1.8f
+                    canvas.drawLine(from.first, from.second, from.first + (to.first - from.first) * progress, from.second + (to.second - from.second) * progress, paint)
+                }
+                // Expanding touch-wave rings pulse from the active lyric node.
+                val origin = points[activeWord]
+                for (ring in 0 until 3) {
+                    val phase = (wordProgress + ring * .34f) % 1f
+                    paint.color = Color.argb(((1f - phase) * 125f).toInt(), 255, 75, 115)
+                    paint.strokeWidth = 1.5f
+                    canvas.drawCircle(origin.first, origin.second, 8f + phase * h * .10f, paint)
+                }
             }
             paint.style = Paint.Style.FILL
             points.forEachIndexed { i, p ->
