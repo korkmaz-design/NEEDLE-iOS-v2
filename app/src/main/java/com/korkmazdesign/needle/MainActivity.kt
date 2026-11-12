@@ -97,8 +97,7 @@ fun NeedleScreen() {
                     Spacer(Modifier.weight(1f))
                     Text("NOW PLAYING", color = Crimson, fontSize = 10.sp, letterSpacing = 4.sp)
                     Spacer(Modifier.height(14.dp))
-                    Text("The night
-is still young", color = SoftWhite, fontSize = 31.sp, lineHeight = 37.sp, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
+                    Text("The night\\nis still young", color = SoftWhite, fontSize = 31.sp, lineHeight = 37.sp, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(18.dp))
                     Text("NEEDLE • VISUAL EXPERIENCE", color = SoftWhite.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 2.sp)
                     Spacer(Modifier.weight(1f))
