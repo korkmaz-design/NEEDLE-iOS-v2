@@ -3,6 +3,7 @@ package com.korkmazdesign.needle
 import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
+import android.graphics.PixelFormat
 import android.opengl.Matrix
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -45,6 +46,9 @@ object NeedleFrameFactory {
 class NeedleGlSurfaceView(context: Context) : GLSurfaceView(context) {
     init {
         setEGLContextClientVersion(2)
+        setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+        holder.setFormat(PixelFormat.TRANSLUCENT)
+        setZOrderMediaOverlay(true)
         setRenderer(NeedleGlRenderer())
         renderMode = RENDERMODE_CONTINUOUSLY
         preserveEGLContextOnPause = true
@@ -116,7 +120,7 @@ private class NeedleGlRenderer : GLSurfaceView.Renderer {
         colorHandle = GLES20.glGetUniformLocation(program, "uColor")
         pointSizeHandle = GLES20.glGetUniformLocation(program, "uPointSize")
         pointModeHandle = GLES20.glGetUniformLocation(program, "uPointMode")
-        GLES20.glClearColor(.008f, .006f, .012f, 1f)
+        GLES20.glClearColor(0f, 0f, 0f, 0f)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
     }

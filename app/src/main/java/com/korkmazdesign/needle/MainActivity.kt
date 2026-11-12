@@ -200,6 +200,11 @@ fun NeedleScreen(
             Box(Modifier.fillMaxSize()) {
                 androidx.compose.ui.viewinterop.AndroidView(
                     modifier = Modifier.fillMaxSize(),
+                    factory = { ctx -> NeedleVideoTextureView(ctx) },
+                    update = { }
+                )
+                androidx.compose.ui.viewinterop.AndroidView(
+                    modifier = Modifier.fillMaxSize(),
                     factory = { ctx -> NeedleGlSurfaceView(ctx).apply { renderMode = android.opengl.GLSurfaceView.RENDERMODE_CONTINUOUSLY } },
                     update = { it.requestRender() }
                 )
