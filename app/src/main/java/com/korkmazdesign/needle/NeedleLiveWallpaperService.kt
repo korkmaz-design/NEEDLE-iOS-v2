@@ -8,6 +8,7 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
 import kotlin.math.cos
@@ -24,7 +25,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
         private val tick = object : Runnable {
             override fun run() {
                 drawFrame()
-                if (visible) handler.postDelayed(this, 33)
+                if (visible) handler.postDelayed(this, 16)
             }
         }
 
@@ -69,7 +70,11 @@ class NeedleLiveWallpaperService : WallpaperService() {
 
             val audio = NeedleAudioReactive.level.coerceIn(0f, 1f)
             val current = NeedleMusicState.lyrics.value
-            val pos = NeedleMusicState.positionMs.value
+            val basePosition = NeedleMusicState.positionMs.value
+            val updatedAt = NeedleMusicState.positionUpdatedAt.value
+            val pos = if (NeedleMusicState.playing.value && updatedAt > 0L)
+                basePosition + (SystemClock.elapsedRealtime() - updatedAt).coerceAtLeast(0L)
+            else basePosition
             val frameState = NeedleFrameFactory.create(current, pos, audio)
             val words = frameState.words
             val activeWord = frameState.activeWord
@@ -156,7 +161,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
             paint.color = Color.argb(120, 255, 255, 255)
             paint.textSize = 9f
             canvas.drawText("A NEEDLE EXPERIENCE", w * .5f, h * .91f, paint)
-            frame += .045f
+            frame += .0225f
         }
 
         private fun ellipsize(value: String, p: Paint, maxWidth: Float): String {
