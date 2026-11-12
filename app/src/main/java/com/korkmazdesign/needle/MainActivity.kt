@@ -1,6 +1,9 @@
 package com.korkmazdesign.needle
 
 import android.os.Bundle
+import android.os.Build
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -54,6 +57,9 @@ private val SoftWhite = Color(0xFFF4EDF0)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 7101)
+        }
         window.statusBarColor = android.graphics.Color.rgb(8, 6, 9)
         window.navigationBarColor = android.graphics.Color.rgb(8, 6, 9)
         setContent { NeedleScreen(onConnectSpotify = { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }) }
