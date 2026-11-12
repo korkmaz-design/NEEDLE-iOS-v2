@@ -71,7 +71,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
             for (i in 0 until 46) {
                 val lyricPhase = if (NeedleMusicState.lyrics.value.isNotEmpty()) (NeedleMusicState.lyrics.value.indexOfLast { it.timeMs <= NeedleMusicState.positionMs.value }.coerceAtLeast(0) * .31f) else 0f
                 val angle = i * 2.399f + lyricPhase + .10f * sin(frame + i)
-                val radius = (30f + (i % 8) * 25f) * (1f + .055f * sin(frame + i))
+                val audio = NeedleAudioReactive.level\n                val radius = (30f + (i % 8) * 25f + audio * (18f + (i % 6) * 5f)) * (1f + .055f * sin(frame + i))
                 val x = w * .5f + cos(angle) * radius
                 val y = h * .43f + sin(angle) * radius * 1.45f
                 points.add(Pair(x, y))
@@ -83,7 +83,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
                     val b = points[j]
                     val dx = a.first - b.first
                     val dy = a.second - b.second
-                    if (dx * dx + dy * dy < (48f + 55f * (0.5f + 0.5f * sin(frame * 0.8f))) * (48f + 55f * (0.5f + 0.5f * sin(frame * 0.8f)))) {
+                    if (dx * dx + dy * dy < (42f + 45f * (0.5f + 0.5f * sin(frame * 0.8f)) + audio * 75f) * (42f + 45f * (0.5f + 0.5f * sin(frame * 0.8f)) + audio * 75f)) {
                         paint.color = Color.argb(90, 255, 45, 83)
                         canvas.drawLine(a.first, a.second, b.first, b.second, paint)
                     }
@@ -91,7 +91,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
             }
             points.forEachIndexed { i, p ->
                 paint.color = if (i % 5 == 0) Color.WHITE else Color.argb(190, 255, 225, 234)
-                canvas.drawCircle(p.first, p.second, if (i % 5 == 0) 3.2f else 1.7f, paint)
+                canvas.drawCircle(p.first, p.second, (if (i % 5 == 0) 3.2f else 1.7f) + audio * 3f, paint)
                 if (i % 5 == 0) {
                     paint.color = Color.argb(42, 255, 45, 83)
                     canvas.drawCircle(p.first, p.second, 10f + 2f * sin(frame), paint)
