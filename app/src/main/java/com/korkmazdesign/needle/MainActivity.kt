@@ -179,9 +179,9 @@ fun NeedleScreen(onConnectSpotify: () -> Unit, onSetWallpaper: () -> Unit,
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = Ink) {
             Box(Modifier.fillMaxSize().background(Color(0xFF16040A))) {
-                AndroidView(Modifier.fillMaxSize(), factory = { ctx ->
+                AndroidView(factory = { ctx ->
                     NeedleGlSurfaceView(ctx).apply { renderMode = android.opengl.GLSurfaceView.RENDERMODE_CONTINUOUSLY }
-                }, update = { it.requestRender() })
+                }, modifier = Modifier.fillMaxSize(), update = { it.requestRender() })
 
                 androidx.compose.foundation.Canvas(Modifier.fillMaxSize().padding(10.dp)) {
                     val stroke = 1.15.dp.toPx()
