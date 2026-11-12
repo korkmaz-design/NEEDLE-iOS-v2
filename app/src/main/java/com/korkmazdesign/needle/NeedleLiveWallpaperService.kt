@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
@@ -68,8 +69,9 @@ class NeedleLiveWallpaperService : WallpaperService() {
 
             val points = ArrayList<Pair<Float, Float>>()
             for (i in 0 until 46) {
-                val angle = i * 2.399f
-                val radius = (34f + (i % 8) * 23f) * (1f + .035f * sin(frame + i))
+                val lyricPhase = if (NeedleMusicState.lyrics.value.isNotEmpty()) (NeedleMusicState.lyrics.value.indexOfLast { it.timeMs <= NeedleMusicState.positionMs.value }.coerceAtLeast(0) * .31f) else 0f
+                val angle = i * 2.399f + lyricPhase + .10f * sin(frame + i)
+                val radius = (30f + (i % 8) * 25f) * (1f + .055f * sin(frame + i))
                 val x = w * .5f + cos(angle) * radius
                 val y = h * .43f + sin(angle) * radius * 1.45f
                 points.add(Pair(x, y))
@@ -81,8 +83,8 @@ class NeedleLiveWallpaperService : WallpaperService() {
                     val b = points[j]
                     val dx = a.first - b.first
                     val dy = a.second - b.second
-                    if (dx * dx + dy * dy < 115f * 115f) {
-                        paint.color = Color.argb(58, 255, 45, 83)
+                    if (dx * dx + dy * dy < (48f + 55f * (0.5f + 0.5f * sin(frame * 0.8f))) * (48f + 55f * (0.5f + 0.5f * sin(frame * 0.8f)))) {
+                        paint.color = Color.argb(90, 255, 45, 83)
                         canvas.drawLine(a.first, a.second, b.first, b.second, paint)
                     }
                 }
@@ -115,10 +117,11 @@ class NeedleLiveWallpaperService : WallpaperService() {
             val active = current.indexOfLast { it.timeMs <= pos }
             val line = current.getOrNull(active)?.text ?: NeedleMusicState.title.value.takeIf { it != "No track connected" } ?: "THE NIGHT IS STILL YOUNG"
             paint.color = Color.WHITE
-            paint.textSize = 23f
+            paint.typeface = Typeface.create("serif", Typeface.NORMAL)
+            paint.textSize = 34f
             canvas.drawText(ellipsize(line, paint, w * .84f), w * .5f, h * .69f, paint)
             paint.color = Color.argb(170, 230, 210, 220)
-            paint.textSize = 13f
+            paint.textSize = 17f
             canvas.drawText(ellipsize(NeedleMusicState.artist.value, paint, w * .75f), w * .5f, h * .73f, paint)
             paint.color = Color.argb(120, 255, 255, 255)
             paint.textSize = 9f
