@@ -112,7 +112,11 @@ class NeedleLiveWallpaperService : WallpaperService() {
                 val p = points.getOrNull(i) ?: return@forEachIndexed
                 paint.color = if (i == activeWord) Color.WHITE else Color.argb(185, 255, 235, 242)
                 paint.typeface = Typeface.create("sans-serif", if (i == activeWord) Typeface.BOLD else Typeface.NORMAL)
-                paint.textSize = if (i == activeWord) (w * .045f).coerceIn(19f, 31f) else (w * .023f).coerceIn(10f, 16f)
+                val emphasis = if (i == activeWord)
+                    1.0f + .48f * (0.5f + 0.5f * sin(frame * 2.4f)) + audio * .18f
+                    else if (i == activeWord - 1 || i == activeWord + 1) 1.12f else .82f
+                paint.textSize = (if (i == activeWord) (w * .045f).coerceIn(19f, 31f)
+                    else (w * .023f).coerceIn(10f, 16f)) * emphasis
                 var shown = word
                 val maxText = w / maxOf(4f, words.size.toFloat()) * .92f
                 while (shown.length > 2 && paint.measureText(shown) > maxText) shown = shown.dropLast(1)
@@ -143,7 +147,7 @@ class NeedleLiveWallpaperService : WallpaperService() {
 
             paint.color = Color.WHITE
             paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            paint.textSize = (w * .045f).coerceIn(34f, 54f)
+            paint.textSize = (w * .045f).coerceIn(34f, 54f) * (1.0f + .18f * (0.5f + 0.5f * sin(frame * 2.4f)) + audio * .08f)
             canvas.drawText(ellipsize(words.getOrNull(activeWord).orEmpty(), paint, w * .90f), w * .5f, h * .69f, paint)
             paint.color = Color.argb(170, 230, 210, 220)
             paint.textSize = (w * .027f).coerceIn(22f, 34f)
