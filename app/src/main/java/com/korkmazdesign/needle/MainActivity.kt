@@ -175,19 +175,17 @@ fun NeedleScreen(
         while (true) {
             val base = NeedleMusicState.positionMs.value
             val updated = NeedleMusicState.positionUpdatedAt.value
-            playbackPosition = if (NeedleMusicState.playing.value && updated > 0L)
+            val interpolatedPosition = if (NeedleMusicState.playing.value && updated > 0L)
                 base + (SystemClock.elapsedRealtime() - updated).coerceAtLeast(0L) else base
-            delay(250)
+            playbackPosition = interpolatedPosition
+            NeedleGlState.frame = NeedleFrameFactory.create(
+                NeedleMusicState.lyrics.value, interpolatedPosition, NeedleAudioReactive.level
+            )
+            delay(33)
         }
     }
     val lyricLines = NeedleMusicState.lyrics.value
     val activeLyric = lyricLines.indexOfLast { it.timeMs <= playbackPosition }
-
-    LaunchedEffect(activeLyric, playbackPosition, lyricLines, trackTitle) {
-        NeedleGlState.frame = NeedleFrameFactory.create(
-            lyricLines, playbackPosition, NeedleAudioReactive.level
-        )
-    }
 
     val motion = rememberInfiniteTransition(label = "needle-motion")
     val lyricReveal by animateFloatAsState(targetValue = if (activeLyric >= 0) 1f else 0f, animationSpec = tween(1100), label = "lyric-reveal")
