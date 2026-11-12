@@ -184,16 +184,9 @@ fun NeedleScreen(
     val activeLyric = lyricLines.indexOfLast { it.timeMs <= playbackPosition }
 
     LaunchedEffect(activeLyric, playbackPosition, lyricLines, trackTitle) {
-        val line = lyricLines.getOrNull(activeLyric)
-        val words = line?.text?.trim()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
-        val nextTime = lyricLines.getOrNull(activeLyric + 1)?.timeMs
-        val duration = if (line != null && nextTime != null)
-            (nextTime - line.timeMs).coerceAtLeast(1000L) else 4000L
-        val progress = if (line != null)
-            ((playbackPosition - line.timeMs).toFloat() / duration).coerceIn(0f, .999f) else 0f
-        val activeWord = if (words.isNotEmpty()) (progress * words.size).toInt().coerceIn(0, words.lastIndex) else -1
-        val wordProgress = if (words.isNotEmpty()) (progress * words.size - activeWord).coerceIn(0f, 1f) else 0f
-        NeedleGlState.frame = NeedleFrame(words, activeWord, wordProgress, NeedleAudioReactive.level)
+        NeedleGlState.frame = NeedleFrameFactory.create(
+            lyricLines, playbackPosition, NeedleAudioReactive.level
+        )
     }
 
     val motion = rememberInfiniteTransition(label = "needle-motion")
