@@ -22,12 +22,28 @@ jobs:
             -sdk iphonesimulator \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build \
+            -derivedDataPath build-simulator \
             CODE_SIGNING_ALLOWED=NO build
       - name: Upload simulator app
         uses: actions/upload-artifact@v4
         with:
           name: NEEDLE-simulator-app
-          path: build/Build/Products/Debug-iphonesimulator/NEEDLE.app
+          path: build-simulator/Build/Products/Debug-iphonesimulator/NEEDLE.app
+          if-no-files-found: error
+          retention-days: 7
+      - name: Build for physical iPhone (unsigned validation)
+        run: |
+          xcodebuild -project NEEDLE.xcodeproj \
+            -scheme NEEDLE \
+            -sdk iphoneos \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build-iphone \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Upload unsigned iPhone app
+        uses: actions/upload-artifact@v4
+        with:
+          name: NEEDLE-iphoneos-unsigned
+          path: build-iphone/Build/Products/Debug-iphoneos/NEEDLE.app
           if-no-files-found: error
           retention-days: 7
