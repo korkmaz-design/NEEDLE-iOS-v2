@@ -50,6 +50,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.nativeCanvas
+import android.graphics.Paint as AndroidPaint
+import android.graphics.Typeface as AndroidTypeface
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -205,44 +208,82 @@ fun NeedleScreen(
                         center = Offset(size.width * .52f, size.height * .43f),
                         radius = size.maxDimension * .78f
                     ))
-                    val cx = size.width * .5f
-                    val cy = size.height * .40f
-                    val line = lyricLines.getOrNull(activeLyric)
+                    val words = lyricLines.getOrNull(activeLyric)?.text?.trim()
+                        ?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
                     val nextLineTime = lyricLines.getOrNull(activeLyric + 1)?.timeMs
-                    val lineDuration = if (line != null && nextLineTime != null)
+                    val line = lyricLines.getOrNull(activeLyric)
+                    val duration = if (line != null && nextLineTime != null)
                         (nextLineTime - line.timeMs).coerceAtLeast(1000L) else 4000L
-                    val lineProgress = if (line != null)
-                        ((playbackPosition - line.timeMs).toFloat() / lineDuration).coerceIn(0f, .999f) else 0f
-                    val words = line?.text?.trim()?.split(Regex("\\s+"))?.filter { it.isNotBlank() }.orEmpty()
-                    val wordIndex = if (words.isNotEmpty()) (lineProgress * words.size).toInt().coerceIn(0, words.lastIndex) else 0
-                    val wordProgress = if (words.isNotEmpty()) (lineProgress * words.size - wordIndex).coerceIn(0f, 1f) else 0f
-                    // One small constellation is drawn for the current lyric word, then it clears for the next word.
-                    val cxWord = cx + ((wordIndex - (words.size - 1) / 2f) * 23f).coerceIn(-size.width * .34f, size.width * .34f)
-                    val audio = NeedleAudioReactive.level
-                    val local = listOf(
-                        Offset(-13f, 4f), Offset(-4f, -11f), Offset(8f, -5f),
-                        Offset(14f, 10f), Offset(-2f, 14f)
-                    )
-                    val nodes = local.mapIndexed { i, offset ->
-                        val drift = sin(pulse * 1.8f + i * 1.7f) * (1.2f + audio * 2f)
-                        Offset(cxWord + offset.x + drift, cy + offset.y + cos(pulse + i) * 1.5f)
+                    val progress = if (line != null)
+                        ((playbackPosition - line.timeMs).toFloat() / duration).coerceIn(0f, .999f) else 0f
+                    val activeWord = if (words.isNotEmpty())
+                        (progress * words.size).toInt().coerceIn(0, words.lastIndex) else -1
+                    val wordProgress = if (words.isNotEmpty())
+                        (progress * words.size - activeWord).coerceIn(0f, 1f) else 0f
+                    val density = drawContext.density
+                    val w = size.width
+                    val h = size.height
+                    val count = maxOf(12, words.size)
+                    val points = (0 until count).map { i ->
+                        val x = w * (.045f + .91f * i / (count - 1).coerceAtLeast(1))
+                        val wave = sin(i * 1.31f + pulse * 1.2f)
+                        val y = h * (.49f + wave * .105f + cos(i * .63f + pulse) * .035f)
+                        Offset(x, y)
                     }
-                    val links = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 4, 4 to 0)
-                    val revealedLinks = (wordProgress * (links.size + 1)).toInt().coerceIn(0, links.size)
-                    links.take(revealedLinks).forEach { (a, b) ->
-                        drawLine(Crimson.copy(alpha = .72f), nodes[a], nodes[b], strokeWidth = .7f)
+                    // Deep, moving field of tiny stars fills the portrait screen.
+                    for (i in 0 until 115) {
+                        val x = ((i * 83f) % w)
+                        val y = ((i * 137f) % h)
+                        val twinkle = (.18f + .22f * (0.5f + 0.5f * sin(pulse * 2f + i))).coerceIn(.08f, .48f)
+                        drawCircle(Color.White.copy(alpha = twinkle), if (i % 9 == 0) 1.8f else .9f, Offset(x, y))
                     }
-                    nodes.forEachIndexed { i, point ->
-                        val visible = i <= revealedLinks
-                        if (visible) {
-                            drawCircle(Color.White.copy(alpha = .92f), radius = 1.15f + audio * .45f, center = point)
-                            if (i == 1) drawCircle(Crimson.copy(alpha = .18f), radius = 3.2f, center = point)
+                    val audio = NeedleAudioReactive.level.coerceIn(0f, 1f)
+                    // A continuous horizontal constellation, with each word anchored to its own star.
+                    for (i in 0 until points.lastIndex) {
+                        val reveal = if (activeWord < 0) .12f else
+                            if (i < activeWord) .72f else if (i == activeWord) wordProgress else .16f
+                        drawLine(Color.White.copy(alpha = reveal * (.55f + audio * .35f)),
+                            points[i], points[i + 1], strokeWidth = (1.0f + audio * 1.1f))
+                    }
+                    points.forEachIndexed { i, p ->
+                        val isActive = i == activeWord
+                        val radius = if (isActive) 3.2f + audio * 1.7f else 1.7f
+                        drawCircle(Crimson.copy(alpha = if (isActive) .22f else .09f),
+                            radius = if (isActive) 15f + audio * 6f else 5f, center = p)
+                        drawCircle(Color.White.copy(alpha = if (isActive) 1f else .78f),
+                            radius = radius, center = p)
+                    }
+                    val native = drawContext.canvas.nativeCanvas
+                    val labelPaint = AndroidPaint(AndroidPaint.ANTI_ALIAS_FLAG).apply {
+                        color = android.graphics.Color.argb(205, 255, 245, 249)
+                        textAlign = AndroidPaint.Align.CENTER
+                        typeface = AndroidTypeface.create("sans-serif", AndroidTypeface.NORMAL)
+                        textSize = 10f * density
+                    }
+                    words.forEachIndexed { i, word ->
+                        val p = points.getOrNull(i) ?: return@forEachIndexed
+                        labelPaint.color = if (i == activeWord) android.graphics.Color.WHITE
+                            else android.graphics.Color.argb(175, 255, 235, 242)
+                        labelPaint.typeface = AndroidTypeface.create("sans-serif", if (i == activeWord) AndroidTypeface.BOLD else AndroidTypeface.NORMAL)
+                        labelPaint.textSize = (if (i == activeWord) 19f else 10f) * density
+                        val maxText = w / maxOf(4f, words.size.toFloat()) * .92f
+                        var shown = word
+                        while (shown.length > 2 && labelPaint.measureText(shown) > maxText) shown = shown.dropLast(1)
+                        if (shown != word) shown += "…"
+                        native.drawText(shown, p.x, p.y + (if (i == activeWord) 30f else 20f) * density, labelPaint)
+                    }
+                    // Draw the current word's constellation pulse and a short traveling spark.
+                    if (activeWord >= 0) {
+                        val p = points[activeWord]
+                        val spark = (wordProgress * 5f).coerceIn(0f, 1f)
+                        drawCircle(Crimson.copy(alpha = .22f + audio * .2f),
+                            radius = 19f + 8f * sin(pulse * 2f), center = p)
+                        if (activeWord < points.lastIndex) {
+                            val next = points[activeWord + 1]
+                            val travel = Offset(p.x + (next.x - p.x) * spark,
+                                p.y + (next.y - p.y) * spark)
+                            drawCircle(Color.White, radius = 2.8f, center = travel)
                         }
-                    }
-                    for (i in 0 until 54) {
-                        val x = (i * 97f % size.width)
-                        val y = (i * 173f % size.height)
-                        drawCircle(Color.White.copy(alpha = if (i % 3 == 0) .42f else .16f), 1f, Offset(x, y))
                     }
                 }
 
@@ -258,13 +299,17 @@ fun NeedleScreen(
                     Text("NOW PLAYING", color = Crimson, fontSize = 10.sp, letterSpacing = 4.sp)
                     Spacer(Modifier.height(14.dp))
                     if (lyricLines.isNotEmpty()) {
-                        Text(lyricLines.getOrNull(activeLyric)?.text ?: lyricLines.first().text,
-                            color = SoftWhite, fontSize = 40.sp, lineHeight = 49.sp,
-                            fontFamily = FontFamily.Serif, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(12.dp))
-                        Text(lyricLines.getOrNull(activeLyric + 1)?.text.orEmpty(),
-                            color = SoftWhite.copy(alpha = .48f), fontSize = 23.sp,
-                            lineHeight = 31.sp, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Light, textAlign = TextAlign.Center)
+                        val currentWords = lyricLines.getOrNull(activeLyric)?.text?.trim()?.split(Regex("\\s+")).orEmpty()
+                        val nextTime = lyricLines.getOrNull(activeLyric + 1)?.timeMs
+                        val currentLine = lyricLines.getOrNull(activeLyric)
+                        val span = if (currentLine != null && nextTime != null) (nextTime - currentLine.timeMs).coerceAtLeast(1000L) else 4000L
+                        val lineProgress = if (currentLine != null) ((playbackPosition - currentLine.timeMs).toFloat() / span).coerceIn(0f, .999f) else 0f
+                        val wi = if (currentWords.isNotEmpty()) (lineProgress * currentWords.size).toInt().coerceIn(0, currentWords.lastIndex) else 0
+                        Text(currentWords.getOrNull(wi).orEmpty(),
+                            color = SoftWhite, fontSize = 34.sp, lineHeight = 40.sp,
+                            fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(8.dp))
+                        Text("WORD IN CONSTELLATION", color = SoftWhite.copy(alpha = .48f), fontSize = 9.sp, letterSpacing = 2.sp)
                     } else {
                         Text(NeedleMusicState.lyricsMessage.value, color = SoftWhite.copy(alpha = .75f),
                             fontSize = 16.sp, textAlign = TextAlign.Center)
